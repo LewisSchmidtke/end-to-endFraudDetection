@@ -19,18 +19,18 @@ CREATE TABLE user_devices (
     last_used timestamp
 );
 
+CREATE TABLE payment_methods (
+    payment_method_id SERIAL PRIMARY KEY,
+    user_id integer NOT NULL,
+    payment_method varchar(255),
+    payment_service_provider varchar(255)
+);
+
 CREATE TABLE merchants (
     merchant_id SERIAL PRIMARY KEY,
     merchant_name varchar(255),
     country varchar(255),
     category varchar(255)
-);
-
-CREATE TABLE payment_methods (
-    payment_method_id SERIAL PRIMARY KEY,
-    card_provider varchar(255),
-    card_type varchar(255),
-    user_id integer NOT NULL
 );
 
 CREATE TABLE transactions (

@@ -1,0 +1,9 @@
+# Secrets
+credentials.env
+instructions.txt
+
+# Virtual Environment
+.venv
+
+# PyCharm
+.idea/

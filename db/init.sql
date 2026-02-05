@@ -30,7 +30,7 @@ CREATE TABLE merchants (
     merchant_id SERIAL PRIMARY KEY,
     merchant_name varchar(255),
     country varchar(255),
-    category varchar(255)
+    rating varchar(255)
 );
 
 CREATE TABLE transactions (

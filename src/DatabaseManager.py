@@ -126,3 +126,29 @@ class DatabaseManager:
                     conn.rollback()
                     print(f"Error updating database: {e}")
                     raise
+
+    def insert_merchant(self, merchant_data):
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        INSERT INTO merchants (merchant_name, country, rating) 
+                        VALUES (%s, %s, %s)
+                        RETURNING merchant_id
+                    """
+                    # Insert user_data into table
+                    cursor.execute(query, (
+                        merchant_data["name"],
+                        merchant_data["country"],
+                        merchant_data["rating"],
+                    ))
+                    user_id = cursor.fetchone()[0]
+
+                    conn.commit()
+
+                    return user_id
+
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Error updating database: {e}")
+                    raise

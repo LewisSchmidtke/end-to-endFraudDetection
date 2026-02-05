@@ -111,6 +111,35 @@ class PaymentMethodGenerator:
         return payment_method_info
 
 
+class MerchantGenerator:
+    def __init__(self, country_list=None):
+        self.FakeData = Faker()
+        if country_list is None:
+            self.country_list = ["US","CN","IN","CA","JP","DE","GB","FR"] # Use as default list
+        else:
+            self.country_list = country_list
+
+        self.merchant_data = {
+            "Renowned": {"weight": 0.7},
+            "Mid": {"weight": 0.25},
+            "Unknown": {"weight": 0.05},
+        }
+        self.merchant_rating = list(self.merchant_data.keys())
+        self.merchant_rating_weights = [value["weight"] for value in self.merchant_data.values()]
+        util.confirm_weights(self.merchant_rating_weights)
+
+    def generate_merchant(self):
+        # Needs name, country, category and rating
+        merchant_rating = random.choices(self.merchant_rating, weights=self.merchant_rating_weights, k=1)[0]
+        country = random.choice(self.country_list)
+        merchant_info = {
+            "name" : self.FakeData.company(),
+            "rating" : merchant_rating,
+            "country" : country,
+        }
+
+        return merchant_info
+
 if __name__ == "__main__":
     user_generator = UserGenerator()
     user_generator.generate_user()

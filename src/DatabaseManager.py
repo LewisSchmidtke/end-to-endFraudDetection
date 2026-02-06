@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 
-load_dotenv(dotenv_path="credentials.env")
+env_path = Path(__file__).resolve().parent.parent / "credentials.env"
+load_dotenv(dotenv_path=env_path)
+
 
 class DatabaseManager:
     # TODO: validate data before db

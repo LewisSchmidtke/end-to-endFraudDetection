@@ -5,38 +5,50 @@ from datetime import datetime
 import numpy as np
 
 import src.utility as util
+import src.constants as const
 
 
 class TransactionGenerator:
-    def __init__(self, user_id, device_id, payment_id, merchant_id, fraud_rate=0.01):
+    def __init__(self, conversion_rates, fraud_rate=0.01):
+        # Set conversion rates
+        self.conversion_rates = conversion_rates
+
         # Transaction classification and their likelihood
         self.fraudulent_transaction_rate = fraud_rate
         self.normal_transaction_rate = 1 - self.fraudulent_transaction_rate
         self.transaction_types = ["Fraudulent", "normal"]
         self.transaction_rates = [self.fraudulent_transaction_rate, self.normal_transaction_rate]
 
-
         # Transaction cluster amount definitions and weighting --> Values inside each cluster will have unique weighting
-        self.transaction_cluster_data = {
-            "Low Level Spending" : {"min" : 10, "max" : 100, "weight" : 0.9, "distribution" : "random"},
-            "Mid Level Spending" : {"min" : 101, "max" : 10000, "weight" : 0.095, "distribution" : "trapezoidal"},
-            "High Level Spending" : {"min" : 10001, "max" : 10000000, "weight" : 0.005, "distribution" : "exp"}
-        }
+        self.transaction_cluster_data = const.TRANSACTION_CLUSTER_DATA
         self.transaction_clusters = list(self.transaction_cluster_data.keys())
         self.transaction_cluster_weights = [value["weight"] for value in self.transaction_cluster_data.values()]
         self.cluster_probability_distributions = [value["distribution"] for value in self.transaction_cluster_data.values()]
         util.confirm_weights(self.transaction_cluster_weights)
 
+    def generate_transaction(self, user_id, device_id, payment_id, merchant_id, conversion_rates=None):
+        transaction_amount_local_curr, currency = self._generate_transaction_amount_dollar()
+        transaction_info = {
+            "transaction_amount" : transaction_amount_local_curr,
+            "transaction_timestamp" : datetime.now(),
+            "transaction_status" : "",
+            "transaction_currency" : currency,
+            "transaction_country" : "",
+            "transaction_channel" : "",
 
+            "ip_address" : "", #TODO: Add ip address to device gen, so we can match --> Fraudulent ip address set later
 
-    def generate_transaction(self):
-        pass
-        # transaction_info = {
-        #     "transaction_amount" : "",
-        #     "transaction_timestamp" : datetime.now(),
-        #     "transaction_status" : "",
-        #     "transaction" : ""
-        # }
+            "user_id": user_id,
+            "merchant_id": merchant_id,
+            "payment_id": payment_id,
+            "device_id": device_id,
+        }
+
+        # Use this bool for machine learning ground truth later
+        if self._generate_transaction_type():
+            transaction_info["is_fraudulent"] = True
+        else:
+            transaction_info["is_fraudulent"] = False
 
     def _generate_transaction_type(self):
         transaction_type = random.choices(self.transaction_types, weights=self.transaction_rates, k=1)[0]
@@ -44,8 +56,17 @@ class TransactionGenerator:
         return fraudulent_bool
 
 
-    def _generate_transaction_amount_dollar(self):
+    def _generate_transaction_amount_dollar(self, conversion_rates=None):
         """All values in dollar, will convert to transaction currency in other function"""
+        # Get current conversion rates, or fallback to initial conversion rates
+        active_conversion_rates = conversion_rates or self.conversion_rates
+
+        # Select transaction currency
+        currencies = [value["currency"] for value in const.COUNTRY_DATA.values()]
+        currency_weights = [value["weight"] for value in const.COUNTRY_DATA.values()]
+        util.confirm_weights(currency_weights)
+        transaction_currency = random.choices(currencies, weights=currency_weights, k=1)[0]
+
         transaction_cluster = random.choices(self.transaction_clusters, weights=self.transaction_cluster_weights, k=1)[0]
         cluster_min = self.transaction_cluster_data[transaction_cluster]["min"]
         cluster_max = self.transaction_cluster_data[transaction_cluster]["max"]
@@ -72,7 +93,6 @@ class TransactionGenerator:
             raise ValueError(f"{cluster_distribution} is an invalid distribution. "
                              f"Only {self.cluster_probability_distributions} are available!")
 
-        # TODO: we need to choose a local currency from currency data during user generation. Then find a way to either
-        #  give the conversion rates to transaction generator or call the currency converter inside here. Convert to local currency, then return.
+        transaction_amount_local_currency = round(active_conversion_rates["conversion_rates"][transaction_currency] * transaction_amount_dollar, 2)
 
-        return transaction_amount_dollar
+        return transaction_amount_local_currency, transaction_currency

@@ -2,6 +2,7 @@ import random
 from datetime import datetime
 from faker import Faker
 import src.utility as util
+import src.constants as const
 
 
 class UserGenerator:
@@ -9,26 +10,13 @@ class UserGenerator:
         self.FakeData = Faker()
 
         # Define Country data and validate weights
-        self.country_data = {
-            "US" : {"currency" : "USD", "weight" : 0.5},
-            "CN" : {"currency" : "CNY", "weight" : 0.15},
-            "IN" : {"currency" : "INR", "weight" : 0.05},
-            "CA" : {"currency" : "CAD", "weight" : 0.025},
-            "JP" : {"currency" : "JPY", "weight" : 0.025},
-            "DE" : {"currency" : "EUR", "weight" : 0.075},
-            "GB" : {"currency" : "GBP", "weight" : 0.1},
-            "FR" : {"currency" : "EUR", "weight" : 0.075}
-        }
+        self.country_data = const.COUNTRY_DATA
         self.countries = list(self.country_data.keys())
         self.country_weights = [value["weight"] for value in self.country_data.values()]
         util.confirm_weights(self.country_weights)
 
         # Define Email data and validate weights
-        self.email_data = {
-            "free" : {"provider" : "@free.com", "weight" : 0.7},
-            "premium" : {"provider" : "@premium.com", "weight" : 0.1},
-            "business" : {"provider" : "@business.com", "weight" : 0.2},
-        }
+        self.email_data = const.EMAIL_DATA
         self.email_providers = list(self.email_data.keys())
         self.email_weights = [value["weight"] for value in self.email_data.values()]
         util.confirm_weights(self.email_weights)
@@ -76,24 +64,14 @@ class DeviceGenerator:
 class PaymentMethodGenerator:
     def __init__(self):
         # Define payment data and validate weights
-        self.payment_method_data = {
-            "bank_transfer" : {"weight": 0.23},
-            "credit_card" : {"weight": 0.30},
-            "debit_card" : {"weight" : 0.36},
-            "BNPL" : {"weight" : 0.1},
-            "crypto_currency" : {"weight" : 0.01},
-        }
+        self.payment_method_data = const.PAYMENT_METHOD_DATA
         self.payment_methods = list(self.payment_method_data.keys())
         self.payment_method_weights = [value["weight"] for value in self.payment_method_data.values()]
         util.confirm_weights(self.payment_method_weights)
 
         # Define payment providers and validate weights
         # We use this classification to further calculate the risk score later
-        self.payment_provider_data = {
-            "Renowned" : {"weight": 0.75},
-            "Mid" : {"weight": 0.24},
-            "Unknown" : {"weight": 0.01},
-        }
+        self.payment_provider_data = const.PAYMENT_PROVIDER_DATA
         self.payment_providers = list(self.payment_provider_data.keys())
         self.payment_providers_weights = [value["weight"] for value in self.payment_provider_data.values()]
         util.confirm_weights(self.payment_providers_weights)
@@ -112,18 +90,12 @@ class PaymentMethodGenerator:
 
 
 class MerchantGenerator:
-    def __init__(self, country_list=None):
+    def __init__(self):
         self.FakeData = Faker()
-        if country_list is None:
-            self.country_list = ["US","CN","IN","CA","JP","DE","GB","FR"] # Use as default list
-        else:
-            self.country_list = country_list
+        self.country_list = list(const.COUNTRY_DATA.keys())
 
-        self.merchant_data = {
-            "Renowned": {"weight": 0.7},
-            "Mid": {"weight": 0.25},
-            "Unknown": {"weight": 0.05},
-        }
+        # Define merchant data and validate weights
+        self.merchant_data = const.MERCHANT_DATA
         self.merchant_rating = list(self.merchant_data.keys())
         self.merchant_rating_weights = [value["weight"] for value in self.merchant_data.values()]
         util.confirm_weights(self.merchant_rating_weights)
@@ -132,6 +104,7 @@ class MerchantGenerator:
         # Needs name, country, category and rating
         merchant_rating = random.choices(self.merchant_rating, weights=self.merchant_rating_weights, k=1)[0]
         country = random.choice(self.country_list)
+
         merchant_info = {
             "name" : self.FakeData.company(),
             "rating" : merchant_rating,

@@ -24,6 +24,7 @@ class DatabaseManager:
         return psycopg2.connect(**self.db_config)
 
     def insert_user(self, user_data):
+        # TODO: validate if email is already in use, if so fail user generation.
         with self.establish_connection() as conn:
             with conn.cursor() as cursor:
                 try:

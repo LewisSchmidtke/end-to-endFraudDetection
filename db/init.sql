@@ -41,7 +41,6 @@ CREATE TABLE transactions (
     transaction_currency varchar(255),
     transaction_country varchar(255),
     transaction_channel varchar(255),
-    ip_address varchar(255),
     user_id integer NOT NULL,
     merchant_id integer NOT NULL,
     payment_id integer NOT NULL,

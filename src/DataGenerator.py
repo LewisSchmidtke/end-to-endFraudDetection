@@ -6,7 +6,13 @@ import src.constants as const
 
 
 class UserGenerator:
+    """
+    Creates a new user.
+    """
     def __init__(self):
+        """
+        Validates the weight distribution for country and email providers
+        """
         self.FakeData = Faker()
 
         # Define Country data and validate weights
@@ -21,7 +27,15 @@ class UserGenerator:
         self.email_weights = [value["weight"] for value in self.email_data.values()]
         util.confirm_weights(self.email_weights)
 
-    def generate_user(self):
+    def generate_user(self) -> dict:
+        """
+        Generates a new device for a selected user. Device info consists of the device type, and a first and last use
+        timestamp. During creation first and last use timestamp are similar. Last use can be updated through the function
+        'update_device_use_data' in DatabaseManager.
+
+        Returns:
+            dict: user information, with keys: name, email, country, city, latitude, longitude, created_at
+        """
         name = self.FakeData.name()
         country = random.choices(self.countries, weights=self.country_weights, k=1)[0]
         email_classification = random.choices(self.email_providers, weights=self.email_weights, k=1)[0]
@@ -42,12 +56,24 @@ class UserGenerator:
 
 
 class DeviceGenerator:
+    """
+    Creates a new device for a specific user.
+    """
     def __init__(self):
         self.device_types = ["mobile","desktop","tablet"] # random.choice doesn't take a set as input
 
-    def generate_device(self, user_id):
-        # At creation first and last used are similar, first used will keep this value,
-        # whereas last used can be updated by a different function
+    def generate_device(self, user_id: int) -> dict:
+        """
+        Generates a new device for a selected user. Device info consists of the device type, and a first and last use
+        timestamp. During creation first and last use timestamp are similar. Last use can be updated through the function
+        'update_device_use_data' in DatabaseManager.
+
+        Args:
+            user_id (int): ID of a specific user.
+
+        Returns:
+            dict: user device information, with keys: user_id, device_type, first_used, last_used
+        """
         first_used = last_used = datetime.now()
         device_type = random.choice(self.device_types) # Choose random device type, currently no weights needed
 
@@ -62,7 +88,13 @@ class DeviceGenerator:
 
 
 class PaymentMethodGenerator:
+    """
+    Creates payment methods for a specific user.
+    """
     def __init__(self):
+        """
+        Validates the weight distribution for payment methods and payment providers.
+        """
         # Define payment data and validate weights
         self.payment_method_data = const.PAYMENT_METHOD_DATA
         self.payment_methods = list(self.payment_method_data.keys())
@@ -76,7 +108,17 @@ class PaymentMethodGenerator:
         self.payment_providers_weights = [value["weight"] for value in self.payment_provider_data.values()]
         util.confirm_weights(self.payment_providers_weights)
 
-    def generate_payment_method(self, user_id):
+    def generate_payment_method(self, user_id: int) -> dict:
+        """
+        Generates a new payment method for a selected user. Payment method consists of payment method type and the
+        payment method provider
+        Args:
+            user_id (int): ID of a specific user.
+
+        Returns:
+            dict: Payment method information, with keys: user_id, payment_method, service_provider
+
+        """
         payment_method_type = random.choices(self.payment_methods, weights=self.payment_method_weights, k=1)[0]
         payment_method_provider = random.choices(self.payment_providers, weights=self.payment_providers_weights, k=1)[0]
 
@@ -90,7 +132,13 @@ class PaymentMethodGenerator:
 
 
 class MerchantGenerator:
+    """
+    Creates data for a new merchant.
+    """
     def __init__(self):
+        """
+        Validates the weight distribution for merchant type ratings.
+        """
         self.FakeData = Faker()
         self.country_list = list(const.COUNTRY_DATA.keys())
 
@@ -100,10 +148,15 @@ class MerchantGenerator:
         self.merchant_rating_weights = [value["weight"] for value in self.merchant_data.values()]
         util.confirm_weights(self.merchant_rating_weights)
 
-    def generate_merchant(self):
-        # Needs name, country, category and rating
+    def generate_merchant(self) -> dict:
+        """
+        Generates data for a new merchant. Merchant data consists of name, rating and country.
+
+        Returns:
+            dict: Merchant information, with keys: name, rating and country
+        """
         merchant_rating = random.choices(self.merchant_rating, weights=self.merchant_rating_weights, k=1)[0]
-        country = random.choice(self.country_list)
+        country = random.choice(self.country_list) # No need for weighted choice here, international company distribution
 
         merchant_info = {
             "name" : self.FakeData.company(),
@@ -112,6 +165,7 @@ class MerchantGenerator:
         }
 
         return merchant_info
+
 
 if __name__ == "__main__":
     user_generator = UserGenerator()

@@ -36,8 +36,6 @@ class TransactionGenerator:
             "transaction_country" : "",
             "transaction_channel" : "",
 
-            "ip_address" : "", #TODO: Add ip address to device gen, so we can match --> Fraudulent ip address set later
-
             "user_id": user_id,
             "merchant_id": merchant_id,
             "payment_id": payment_id,
@@ -50,11 +48,19 @@ class TransactionGenerator:
         else:
             transaction_info["is_fraudulent"] = False
 
+    def generate_fraudulent_pattern(self):
+        pass
+        # Fraud methods:
+        # Card probing: many cards with small amounts that get declined until one succeeds (different merchants perhaps)
+        # Botting: not necessarily fraud, still unwanted in lots of cases. Lots of purchases in a small timeframe with same payment method
+        # Retry: Try of the same item purchase with variations in card number/pin
+        # Account takeover: Long inactive period with sudden purchase frequency increase maybe new location and payment method.
+        # Merchant switching: payment method used for multiple categories normally, then switches to new merchant category + location, i.e. gift cards
+
     def _generate_transaction_type(self):
         transaction_type = random.choices(self.transaction_types, weights=self.transaction_rates, k=1)[0]
         fraudulent_bool = 0 if transaction_type == "normal" else 1
         return fraudulent_bool
-
 
     def _generate_transaction_amount_dollar(self, conversion_rates=None):
         """All values in dollar, will convert to transaction currency in other function"""

@@ -42,7 +42,18 @@ MERCHANT_DATA = {
 
 # Transaction amount cluster data for transaction generation
 TRANSACTION_CLUSTER_DATA = {
-    "Low Level Spending" : {"min" : 10, "max" : 100, "weight" : 0.9, "distribution" : "random"},
-    "Mid Level Spending" : {"min" : 101, "max" : 10000, "weight" : 0.095, "distribution" : "trapezoidal"},
-    "High Level Spending" : {"min" : 10001, "max" : 10000000, "weight" : 0.005, "distribution" : "exp"}
+    "Mini Level Spending" : {"min" : 0.50, "max" : 10, "weight" : 0.35, "distribution_function" : "random"},
+    "Low Level Spending" : {"min" : 11, "max" : 100, "weight" : 0.5, "distribution_function" : "random"},
+    "Mid Level Spending" : {"min" : 101, "max" : 10000, "weight" : 0.125, "distribution_function" : "trapezoidal"},
+    "High Level Spending" : {"min" : 10001, "max" : 10000000, "weight" : 0.025, "distribution_function" : "exp"}
+}
+
+# Fraud type distribution for fraudulent transactions
+# Min/Max transactions are the minimum and maximum number of transaction that will be generated in the fraudulent pattern
+FRAUD_TYPE_DATA = {
+    "Card Probing": {"weight": 0.3, "min_transactions" : 3, "max_transactions" : 15},
+    "Botting": {"weight": 0.25, "min_transactions" : 3, "max_transactions" : 15},
+    "Card Cracking": {"weight": 0.2, "min_transactions" : 3, "max_transactions" : 15},
+    "Account Takeover": {"weight": 0.15, "min_transactions" : 3, "max_transactions" : 15},
+    "Merchant Switching": {"weight": 0.1,"min_transactions" : 3, "max_transactions" : 15},
 }

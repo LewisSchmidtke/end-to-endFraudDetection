@@ -2,6 +2,7 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 from datetime import datetime
+from pathlib import Path
 
 
 env_path = Path(__file__).resolve().parent.parent / "credentials.env"

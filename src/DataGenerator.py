@@ -15,17 +15,12 @@ class UserGenerator:
         """
         self.FakeData = Faker()
 
-        # Define Country data and validate weights
-        self.country_data = const.COUNTRY_DATA
-        self.countries = list(self.country_data.keys())
-        self.country_weights = [value["weight"] for value in self.country_data.values()]
-        util.confirm_weights(self.country_weights)
+        # Define Country data and validate weights with unpack_weighted_data
+        self.countries, self.country_weights = util.unpack_weighted_dict(const.COUNTRY_DATA)
 
-        # Define Email data and validate weights
+        # Define Email data and validate weights with unpack_weighted_dict
         self.email_data = const.EMAIL_DATA
-        self.email_providers = list(self.email_data.keys())
-        self.email_weights = [value["weight"] for value in self.email_data.values()]
-        util.confirm_weights(self.email_weights)
+        self.email_providers, self.email_provider_weights = util.unpack_weighted_dict(self.email_data)
 
     def generate_user(self) -> dict:
         """
@@ -38,7 +33,7 @@ class UserGenerator:
         """
         name = self.FakeData.name()
         country = random.choices(self.countries, weights=self.country_weights, k=1)[0]
-        email_classification = random.choices(self.email_providers, weights=self.email_weights, k=1)[0]
+        email_classification = random.choices(self.email_providers, weights=self.email_provider_weights, k=1)[0]
         user_email = name.replace(" ", ".").lower() + self.email_data[email_classification]["provider"] # create fake email
         lat, lon, city, _, _ = self.FakeData.local_latlng(country_code=country) # get city, latitude and longitude for country
 
@@ -95,18 +90,11 @@ class PaymentMethodGenerator:
         """
         Validates the weight distribution for payment methods and payment providers.
         """
-        # Define payment data and validate weights
-        self.payment_method_data = const.PAYMENT_METHOD_DATA
-        self.payment_methods = list(self.payment_method_data.keys())
-        self.payment_method_weights = [value["weight"] for value in self.payment_method_data.values()]
-        util.confirm_weights(self.payment_method_weights)
+        # Define payment data and additionally validate weights in unpack_weighted_dict
+        self.payment_methods, self.payment_method_weights = util.unpack_weighted_dict(const.PAYMENT_METHOD_DATA)
 
-        # Define payment providers and validate weights
-        # We use this classification to further calculate the risk score later
-        self.payment_provider_data = const.PAYMENT_PROVIDER_DATA
-        self.payment_providers = list(self.payment_provider_data.keys())
-        self.payment_providers_weights = [value["weight"] for value in self.payment_provider_data.values()]
-        util.confirm_weights(self.payment_providers_weights)
+        # Define payment providers and validate weights in unpack_weighted_dict
+        self.payment_providers, self.payment_providers_weights = util.unpack_weighted_dict(const.PAYMENT_PROVIDER_DATA)
 
     def generate_payment_method(self, user_id: int) -> dict:
         """
@@ -117,7 +105,6 @@ class PaymentMethodGenerator:
 
         Returns:
             dict: Payment method information, with keys: user_id, payment_method, service_provider
-
         """
         payment_method_type = random.choices(self.payment_methods, weights=self.payment_method_weights, k=1)[0]
         payment_method_provider = random.choices(self.payment_providers, weights=self.payment_providers_weights, k=1)[0]
@@ -142,11 +129,8 @@ class MerchantGenerator:
         self.FakeData = Faker()
         self.country_list = list(const.COUNTRY_DATA.keys())
 
-        # Define merchant data and validate weights
-        self.merchant_data = const.MERCHANT_DATA
-        self.merchant_rating = list(self.merchant_data.keys())
-        self.merchant_rating_weights = [value["weight"] for value in self.merchant_data.values()]
-        util.confirm_weights(self.merchant_rating_weights)
+        # Define merchant data and validate weights in unpack_weighted_dict
+        self.merchant_rating, self.merchant_rating_weights = util.unpack_weighted_dict(const.MERCHANT_DATA)
 
     def generate_merchant(self) -> dict:
         """

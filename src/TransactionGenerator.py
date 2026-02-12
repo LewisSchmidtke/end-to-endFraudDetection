@@ -129,7 +129,7 @@ class TransactionGenerator:
         set_transaction_amount_dollar: float | None = None,
         set_transaction_cluster: str | None= None,
         set_currency: str | None = None,
-    ) -> tuple[float, str]:
+    ) -> tuple[float, float, str]:
         """
         Generates a random transaction amount in a local currency. Currency can be specified or randomly generated if
         not given. If set_transaction_amount_dollar is None it calls '_generate_transaction_amount_dollar', before converting
@@ -142,6 +142,7 @@ class TransactionGenerator:
 
         Returns:
             float: A random transaction amount in the chosen currency, rounded to two decimal places.
+            float: The generated transaction amount in usd.
             str: The selected currency
         """
         # Get current conversion rates, or fallback to initial conversion rates
@@ -150,7 +151,7 @@ class TransactionGenerator:
         if set_currency is None:
             # Validate currency weights and select a transaction currency
             currencies = [value["currency"] for value in const.COUNTRY_DATA.values()]
-            _, currency_weights = util.unpack_weighted_dict(const.COUNTRY_DATA.values())
+            _, currency_weights = util.unpack_weighted_dict(const.COUNTRY_DATA)
             transaction_currency = random.choices(currencies, weights=currency_weights, k=1)[0]
         else:
             transaction_currency = set_currency
@@ -169,20 +170,22 @@ class TransactionGenerator:
         except KeyError:
             transaction_amount_local_currency = round(active_conversion_rates[transaction_currency] * dollar_amount, 2)
 
-        return transaction_amount_local_currency, transaction_currency
+        return transaction_amount_local_currency, dollar_amount, transaction_currency
 
     @staticmethod
     def _generate_full_single_transaction_data(
             transaction_context: dataclass(),
-            monetary_amount: float,
+            local_amount: float,
+            usd_amount: float,
             currency: str,
-    ):
+    ) -> dict:
         """
         Combines the attributes from the transaction context with the amount and currency information into a dictionary.
 
         Args:
             transaction_context (dataclass): TransactionContext instance with all values set.
-            monetary_amount (float): monetary amount of the transaction.
+            local_amount (float): monetary amount of the transaction in the transaction currency.
+            usd_amount (float): monetary amount of the transaction in usd.
             currency (str): Currency of the transaction context.
         Returns:
             dict: full transaction data inside the dict
@@ -196,8 +199,11 @@ class TransactionGenerator:
                 f"TransactionContext has missing fields: {', '.join(missing)}"
             )
 
-        context_data["transaction_amount"] = monetary_amount
+        context_data["transaction_amount_local"] = local_amount
+        context_data["transaction_amount_usd"] = usd_amount
         context_data["transaction_currency"] = currency
+        # Convert None to string, None if the transaction is not fraudulent
+        context_data["fraud_type_str"] = "None" if transaction_context.fraud_type is None else transaction_context.fraud_type
 
         return context_data
 
@@ -218,7 +224,7 @@ class TransactionGenerator:
 
         Possible Fraud types:
 
-        - Card probing: many cards with small amounts that get declined until one succeeds (different merchants perhaps)
+        - Card probing: many cards with small amounts that get mostly declined
         - Botting: not necessarily fraud, still unwanted in lots of cases. Lots of purchases in a small timeframe with same payment method
         - Retry: Try of the same item purchase with variations in card number/pin
         - Account takeover: Long inactive period with sudden purchase frequency increase maybe new location and payment method.
@@ -246,9 +252,34 @@ class TransactionGenerator:
                                                 merchant_id=merchant_id)
 
         if not fraudulent_transaction_classifier:
-            # TODO: Generate normal transaction pattern here and return the data
-            pass
-            return
+            target_successful_transactions = random.randint(1, 3)
+            actual_successful_transactions = 0
+            transaction_pattern = []
+            transaction_start_time = datetime.now()
+
+            # TODO: Add an Active/Inactive column in the payment method table. When generating set default Active, when
+            #  payment gets declined set Inactive
+
+            # Fixed transaction channel as it is unlikely to buy something in the store while also buying sth online for example
+            transaction_channel = random.choices(["Online", "Local"], [0.7, 0.3])[0]
+            TC.channel = transaction_channel
+
+            while actual_successful_transactions < target_successful_transactions:
+                transaction_delta_seconds = random.uniform(30, 120)
+                transaction_start_time = transaction_start_time + timedelta(seconds=transaction_delta_seconds)
+                TC.base_timestamp = transaction_start_time
+
+                TC.payment_id = self.DBM.fetch_random_payment_id(user_id=user_id) # TODO: Change function to only fetch Active payment_methods
+
+                local_amount, usd_amount, _ = self._generate_transaction_amount_local_currency(set_currency=TC.currency)
+
+                # Status rules: High cluster spending should only be approved if payment method renown is high and payment method is credit card
+                # For all other clusters there should be a small chance for declined anyway
+                # TODO: Implement logic (needs: extract payment method function [can change the fetch id function to fetch full method and then just use id when needed] && needs if logic)
+                transaction_status = ""
+                TC.transaction_status = transaction_status
+
+            return transaction_pattern
 
         min_transactions = const.FRAUD_TYPE_DATA[fraud_type]["min_transactions"]
         max_transactions = const.FRAUD_TYPE_DATA[fraud_type]["max_transactions"]
@@ -257,7 +288,7 @@ class TransactionGenerator:
 
         if fraud_type == "card_probing":
             transaction_pattern = []
-            pattern_start_time = datetime.now()
+            transaction_start_time = datetime.now()
 
             for k in range(number_of_transactions_in_pattern):
                 # Between 30 and 90 seconds per attempt, putting in new card numbers and pin
@@ -274,9 +305,11 @@ class TransactionGenerator:
                     weights=[0.9, 0.1],
                     k=1
                 )[0]
-                TC.base_timestamp = pattern_start_time + timedelta(seconds=k * time_delta_seconds) # Add dynamic delta
+                transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
+                TC.base_timestamp = transaction_start_time
 
-                local_currency_amount, currency = self._generate_transaction_amount_local_currency(
+                # _ is currency here, we already set it previously in TC so no need to name a variable here
+                local_currency_amount, usd_amount, _ = self._generate_transaction_amount_local_currency(
                     set_transaction_cluster=TC.transaction_cluster,
                     set_currency=TC.currency,
                     conversion_rates=conversion_rates
@@ -284,7 +317,7 @@ class TransactionGenerator:
 
                 #generate a small amount eac
                 transaction_data = self._generate_full_single_transaction_data(
-                    transaction_context=TC, amount=local_currency_amount, currency=currency)
+                    transaction_context=TC, local_amount=local_currency_amount, usd_amount=usd_amount, currency=TC.currency)
                 transaction_pattern.append(transaction_data)
 
             return transaction_pattern
@@ -292,12 +325,13 @@ class TransactionGenerator:
 
         elif fraud_type == "botting":
             transaction_pattern = []
-            pattern_start_time = datetime.now()
+            transaction_start_time = datetime.now()
             # TODO: Extract payment method for user id from DB
-            payment_method_id = self.DBM.get_payment_method(user_id) # Method to be build
+            payment_method_id = self.DBM.fetch_random_payment_id(user_id)
             TC.payment_id = payment_method_id
 
-            payment_amount = self._generate_transaction_amount_local_currency(set_transaction_cluster=TC.transaction_cluster)
+            local_amount, usd_amount, currency = self._generate_transaction_amount_local_currency(
+                set_transaction_cluster=TC.transaction_cluster, conversion_rates=conversion_rates)
 
             for k in range(number_of_transactions_in_pattern):
                 # Between 0.5 and 1 seconds per attempt, botting repeatedly
@@ -310,9 +344,12 @@ class TransactionGenerator:
                     weights=[0.1, 0.9], # I set a fictional 10% decline rate due to factors like rate limits when scalping
                     k=1
                 )[0]
-                TC.base_timestamp = pattern_start_time + timedelta(seconds=k * time_delta_seconds)  # Add dynamic delta
+                transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
+                TC.base_timestamp = transaction_start_time
 
-                transaction_data = self._generate_full_single_transaction_data()
+                transaction_data = self._generate_full_single_transaction_data(
+                    transaction_context=TC, local_amount=local_amount, usd_amount=usd_amount, currency=currency
+                )
                 transaction_pattern.append(transaction_data)
 
             return transaction_pattern
@@ -365,23 +402,24 @@ class TransactionGenerator:
 
         tc = TransactionContext(user_id, device_id, merchant_id, is_fraudulent, fraud_type_value)
 
+        # Initial constants are similar in fraud and non-fraud cases.
+        # Validate country weights and select a transaction country and fitting currency
+        countries, weights = util.unpack_weighted_dict(const.COUNTRY_DATA)
+        country = random.choices(countries, weights=weights, k=1)[0]
+        currency = const.COUNTRY_DATA[country]["currency"]
+
+        tc.country = country
+        tc.currency = currency
+
         # Return early here for non-fraud. Other values in tc will be set when generating the pattern
         if not is_fraudulent:
             return tc
 
-
         if fraud_type in {"card_probing", "botting"}:
-            # Initial constants are similar in both cases.
-            # Validate country weights and select a transaction country and fitting currency
-            countries, weights = util.unpack_weighted_dict(const.COUNTRY_DATA)
-            country = random.choices(countries, weights=weights, k=1)[0]
-            currency = const.COUNTRY_DATA[country]["currency"]
-
-            tc.country = country
-            tc.currency = currency
             tc.channel = "online"
 
             # Probing happens at mini amounts, whereas botting happens in low tier.
+            print(fraud_type)
             if fraud_type == "card_probing":
                 tc.transaction_cluster="Mini Level Spending"
             else:
@@ -407,10 +445,14 @@ class TransactionGenerator:
 
 if __name__ == "__main__":
     from CurrencyConvertor import CurrencyConvertor
+
     CC = CurrencyConvertor()
     rates = CC.fetch_conversion_rates()
     TG = TransactionGenerator(rates)
+    DBM = DatabaseManager()
 
-    data = TG.generate_transaction_pattern(1,"Card Probing", 1, 1, 1)
+    data = TG.generate_transaction_pattern(1,1, 1, 1, "Card Probing")
+    for transaction in data:
+        DBM.insert_transaction(data)
     amount = [x["transaction_amount"] for x in data]
     status = [x["transaction_status"] for x in data]

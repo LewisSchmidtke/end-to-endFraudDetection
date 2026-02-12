@@ -35,7 +35,8 @@ CREATE TABLE merchants (
 
 CREATE TABLE transactions (
     transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    transaction_amount NUMERIC(15,2),
+    transaction_amount_local NUMERIC(15,2),
+    transaction_amount_usd NUMERIC(15,2),
     transaction_timestamp timestamp,
     transaction_status varchar(255),
     transaction_currency varchar(255),
@@ -45,7 +46,8 @@ CREATE TABLE transactions (
     merchant_id integer NOT NULL,
     payment_id integer NOT NULL,
     device_id integer NOT NULL,
-    is_fraudulent bool
+    is_fraudulent integer,
+    fraud_type varchar(255)
 );
 
 ALTER TABLE transactions

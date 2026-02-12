@@ -52,7 +52,7 @@ TRANSACTION_CLUSTER_DATA = {
 # Min/Max transactions are the minimum and maximum number of transaction that will be generated in the fraudulent pattern
 FRAUD_TYPE_DATA = {
     "Card Probing": {"weight": 0.3, "min_transactions" : 3, "max_transactions" : 15},
-    "Botting": {"weight": 0.25, "min_transactions" : 3, "max_transactions" : 15},
+    "Botting": {"weight": 0.25, "min_transactions" : 1, "max_transactions" : 10}, # Max 10 to try and stay undetected
     "Card Cracking": {"weight": 0.2, "min_transactions" : 3, "max_transactions" : 15},
     "Account Takeover": {"weight": 0.15, "min_transactions" : 3, "max_transactions" : 15},
     "Merchant Switching": {"weight": 0.1,"min_transactions" : 3, "max_transactions" : 15},

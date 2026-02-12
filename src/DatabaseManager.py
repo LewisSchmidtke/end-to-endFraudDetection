@@ -34,7 +34,6 @@ class DatabaseManager:
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                         RETURNING user_id
                     """
-                    # Insert user_data into table
                     cursor.execute(query, (
                         user_data["name"],
                         user_data["email"],
@@ -140,7 +139,6 @@ class DatabaseManager:
                         VALUES (%s, %s, %s)
                         RETURNING merchant_id
                     """
-                    # Insert user_data into table
                     cursor.execute(query, (
                         merchant_data["name"],
                         merchant_data["country"],
@@ -155,4 +153,59 @@ class DatabaseManager:
                 except Exception as e:
                     conn.rollback()
                     print(f"Error updating database: {e}")
+                    raise
+
+    def insert_transaction(self, transaction_data):
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        INSERT INTO transactions (transaction_amount_local, transaction_amount_usd, transaction_timestamp, transaction_status, transaction_currency, transaction_country, transaction_channel, user_id, merchant_id, payment_id, device_id, is_fraudulent, fraud_type)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING transaction_id
+                    """
+                    cursor.execute(query, (
+                        transaction_data["transaction_amount_local"],
+                        transaction_data["transaction_amount_usd"],
+                        transaction_data["base_timestamp"],
+                        transaction_data["transaction_status"],
+                        transaction_data["transaction_currency"],
+                        transaction_data["country"],
+                        transaction_data["channel"],
+                        transaction_data["user_id"],
+                        transaction_data["merchant_id"],
+                        transaction_data["payment_id"],
+                        transaction_data["device_id"],
+                        transaction_data["is_fraudulent"],
+                        transaction_data["fraud_type_str"],
+                    ))
+                    transaction_id = cursor.fetchone()[0]
+
+                    conn.commit()
+
+                    return transaction_id
+
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Error updating database: {e}")
+                    raise
+
+    def fetch_random_payment_id(self, user_id):
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        SELECT payment_method_id
+                        FROM payment_methods
+                        WHERE user_id = %s
+                        ORDER BY RANDOM()
+                        LIMIT 1;
+                    """
+                    cursor.execute(query, (user_id,))
+                    result = cursor.fetchone()
+
+                    return result[0] if result else None
+
+                except Exception as e:
+                    print(f"Error fetching payment_id: {e}")
                     raise

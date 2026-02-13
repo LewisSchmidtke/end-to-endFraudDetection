@@ -113,6 +113,7 @@ class PaymentMethodGenerator:
             "user_id" : user_id,
             "payment_method" : payment_method_type,
             "service_provider" :payment_method_provider,
+            "payment_is_active" : 1 # Set default value here
         }
 
         return payment_method_info

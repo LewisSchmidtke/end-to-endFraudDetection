@@ -23,7 +23,8 @@ CREATE TABLE payment_methods (
     payment_method_id SERIAL PRIMARY KEY,
     user_id integer NOT NULL,
     payment_method varchar(255),
-    payment_service_provider varchar(255)
+    payment_service_provider varchar(255),
+    payment_is_active integer
 );
 
 CREATE TABLE merchants (

@@ -109,8 +109,8 @@ class DatabaseManager:
             with conn.cursor() as cursor:
                 try:
                     query = """
-                        INSERT INTO payment_methods (user_id, payment_method, payment_service_provider)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO payment_methods (user_id, payment_method, payment_service_provide, payment_is_active) 
+                        VALUES (%s, %s, %s, %S)
                         RETURNING payment_method_id
                     """
                     # Insert user_data into table
@@ -118,6 +118,7 @@ class DatabaseManager:
                         user_payment_method["user_id"],
                         user_payment_method["payment_method"],
                         user_payment_method["service_provider"],
+                        user_payment_method["payment_is_active"]
                     ))
                     payment_method_id = cursor.fetchone()[0]
 
@@ -208,4 +209,23 @@ class DatabaseManager:
 
                 except Exception as e:
                     print(f"Error fetching payment_id: {e}")
+                    raise
+
+    def deactivate_payment_method(self, payment_id):
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        UPDATE payment_methods
+                        SET payment_is_active = 0
+                        WHERE payment_method_id = %s;
+                    """
+                    cursor.execute(query, (payment_id,))
+                    conn.commit()
+
+                    return cursor.rowcount > 0  # Returns True if a row was updated
+
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Error deactivating payment method: {e}")
                     raise

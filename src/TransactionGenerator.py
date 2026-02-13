@@ -257,9 +257,6 @@ class TransactionGenerator:
             transaction_pattern = []
             transaction_start_time = datetime.now()
 
-            # TODO: Add an Active/Inactive column in the payment method table. When generating set default Active, when
-            #  payment gets declined set Inactive
-
             # Fixed transaction channel as it is unlikely to buy something in the store while also buying sth online for example
             transaction_channel = random.choices(["Online", "Local"], [0.7, 0.3])[0]
             TC.channel = transaction_channel
@@ -305,6 +302,10 @@ class TransactionGenerator:
                     weights=[0.9, 0.1],
                     k=1
                 )[0]
+
+                if TC.transaction_status == "Declined":
+                    self.DBM.deactivate_payment_method(payment_method_id)
+
                 transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
                 TC.base_timestamp = transaction_start_time
 
@@ -344,6 +345,10 @@ class TransactionGenerator:
                     weights=[0.1, 0.9], # I set a fictional 10% decline rate due to factors like rate limits when scalping
                     k=1
                 )[0]
+
+                if TC.transaction_status == "Declined":
+                    self.DBM.deactivate_payment_method(payment_method_id)
+
                 transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
                 TC.base_timestamp = transaction_start_time
 

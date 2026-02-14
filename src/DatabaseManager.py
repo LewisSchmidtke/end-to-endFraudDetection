@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
@@ -109,8 +110,8 @@ class DatabaseManager:
             with conn.cursor() as cursor:
                 try:
                     query = """
-                        INSERT INTO payment_methods (user_id, payment_method, payment_service_provide, payment_is_active) 
-                        VALUES (%s, %s, %s, %S)
+                        INSERT INTO payment_methods (user_id, payment_method, payment_service_provider, payment_is_active) 
+                        VALUES (%s, %s, %s, %s)
                         RETURNING payment_method_id
                     """
                     # Insert user_data into table
@@ -170,7 +171,7 @@ class DatabaseManager:
                         transaction_data["transaction_amount_usd"],
                         transaction_data["base_timestamp"],
                         transaction_data["transaction_status"],
-                        transaction_data["transaction_currency"],
+                        transaction_data["currency"],
                         transaction_data["country"],
                         transaction_data["channel"],
                         transaction_data["user_id"],
@@ -206,6 +207,25 @@ class DatabaseManager:
                     result = cursor.fetchone()
 
                     return result[0] if result else None
+
+                except Exception as e:
+                    print(f"Error fetching payment_id: {e}")
+                    raise
+
+    def fetch_active_payment_method(self, user_id):
+        with self.establish_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                try:
+                    query = """
+                        SELECT *
+                        FROM payment_methods
+                        WHERE user_id = %s AND payment_is_active = 1
+                        LIMIT 1;
+                    """
+                    cursor.execute(query, (user_id,))
+                    result = cursor.fetchone()
+
+                    return result  # Returns dict
 
                 except Exception as e:
                     print(f"Error fetching payment_id: {e}")

@@ -48,12 +48,62 @@ TRANSACTION_CLUSTER_DATA = {
     "High Level Spending" : {"min" : 10001, "max" : 10000000, "weight" : 0.025, "distribution_function" : "exp"}
 }
 
+# Data for normal transactions
+NORMAL_TRANSACTION_DATA = {
+    "min_transactions" : 1,
+    "max_transactions" : 3,
+    "min_time_seconds" : 30,
+    "max_time_seconds" : 120
+}
+
 # Fraud type distribution for fraudulent transactions
 # Min/Max transactions are the minimum and maximum number of transaction that will be generated in the fraudulent pattern
 FRAUD_TYPE_DATA = {
-    "Card Probing": {"weight": 0.3, "min_transactions" : 3, "max_transactions" : 15},
-    "Botting": {"weight": 0.25, "min_transactions" : 1, "max_transactions" : 10}, # Max 10 to try and stay undetected
-    "Card Cracking": {"weight": 0.2, "min_transactions" : 3, "max_transactions" : 15},
-    "Account Takeover": {"weight": 0.15, "min_transactions" : 3, "max_transactions" : 15},
-    "Merchant Switching": {"weight": 0.1,"min_transactions" : 3, "max_transactions" : 15},
+    "Card Probing": {
+        "weight": 0.3,
+         "min_transactions" : 3,
+         "max_transactions" : 15,
+         "min_time_seconds" : 30,
+         "max_time_seconds" : 90,
+         "transaction_approved_rate" : 0.1
+    },
+
+    "Botting": {
+        "weight": 0.25,
+        "min_transactions" : 1,
+        "max_transactions" : 10,
+        "min_time_seconds" : 0.5,
+        "max_time_seconds" : 1,
+        "transaction_approved_rate" : 0.9
+    },
+
+    "Card Cracking": {
+        "weight": 0.2,
+        "min_transactions" : 3,
+        "max_transactions" : 15,
+        "min_time_seconds" : 0.5,
+        "max_time_seconds" : 1,
+        "transaction_approved_rate" : 0.9
+    },
+
+    "Account Takeover": {
+        "weight": 0.15,
+        "min_transactions" : 3,
+        "max_transactions" : 15,
+        "min_time_seconds" : 0.5,
+        "max_time_seconds" : 1,
+        "transaction_approved_rate" : 0.9
+    },
+
+    "Merchant Switching": {
+        "weight": 0.1,
+        "min_transactions" : 3,
+        "max_transactions" : 15,
+        "min_time_seconds" : 0.5,
+        "max_time_seconds" : 1,
+        "transaction_approved_rate" : 0.9
+    },
 }
+
+APPROVED = "Approved"
+DECLINED = "Declined"

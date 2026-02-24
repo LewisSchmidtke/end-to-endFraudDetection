@@ -110,8 +110,8 @@ class DatabaseManager:
             with conn.cursor() as cursor:
                 try:
                     query = """
-                        INSERT INTO payment_methods (user_id, payment_method, payment_service_provider, payment_is_active) 
-                        VALUES (%s, %s, %s, %s)
+                        INSERT INTO payment_methods (user_id, payment_method, payment_service_provider, payment_is_active, created_at) 
+                        VALUES (%s, %s, %s, %s, %s)
                         RETURNING payment_method_id
                     """
                     # Insert user_data into table
@@ -119,7 +119,8 @@ class DatabaseManager:
                         user_payment_method["user_id"],
                         user_payment_method["payment_method"],
                         user_payment_method["service_provider"],
-                        user_payment_method["payment_is_active"]
+                        user_payment_method["payment_is_active"],
+                        user_payment_method["created_at"],
                     ))
                     payment_method_id = cursor.fetchone()[0]
 
@@ -137,14 +138,15 @@ class DatabaseManager:
             with conn.cursor() as cursor:
                 try:
                     query = """
-                        INSERT INTO merchants (merchant_name, country, rating) 
-                        VALUES (%s, %s, %s)
+                        INSERT INTO merchants (merchant_name, country, rating, merchant_category) 
+                        VALUES (%s, %s, %s, %s)
                         RETURNING merchant_id
                     """
                     cursor.execute(query, (
                         merchant_data["name"],
                         merchant_data["country"],
                         merchant_data["rating"],
+                        merchant_data["category"],
                     ))
                     user_id = cursor.fetchone()[0]
 

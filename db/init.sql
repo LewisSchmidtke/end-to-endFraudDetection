@@ -24,14 +24,16 @@ CREATE TABLE payment_methods (
     user_id integer NOT NULL,
     payment_method varchar(255),
     payment_service_provider varchar(255),
-    payment_is_active integer
+    payment_is_active integer,
+    created_at timestamp
 );
 
 CREATE TABLE merchants (
     merchant_id SERIAL PRIMARY KEY,
     merchant_name varchar(255),
     country varchar(255),
-    rating varchar(255)
+    rating varchar(255),
+    merchant_category varchar(255)
 );
 
 CREATE TABLE transactions (

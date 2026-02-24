@@ -13,29 +13,26 @@ services:
       - fraud_network
 
   spark-master:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.3
     container_name: spark_master
+    entrypoint: ["/opt/spark/sbin/start-master.sh"]
     environment:
-      - SPARK_MODE=master
       - SPARK_MASTER_HOST=spark-master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-    ports: # Web UI and master port respectively
+      - SPARK_NO_DAEMONIZE=true
+    ports:
       - "8080:8080"
       - "7077:7077"
     networks:
       - fraud_network
 
   spark-worker:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.3
     container_name: spark_worker
+    entrypoint: ["/opt/spark/sbin/start-worker.sh", "spark://spark-master:7077"]
     environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_MEMORY=2g
       - SPARK_WORKER_CORES=2
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_NO_DAEMONIZE=true
     depends_on:
       - spark-master
     networks:

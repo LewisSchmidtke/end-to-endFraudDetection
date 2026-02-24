@@ -40,6 +40,18 @@ MERCHANT_DATA = {
     "Unknown": {"weight": 0.05},
 }
 
+# Relevant merchant categories
+MERCHANT_CATEGORY_DATA = {
+    "Groceries":    {"weight": 0.25},
+    "Electronics":  {"weight": 0.15},
+    "Restaurants":  {"weight": 0.20},
+    "Travel":       {"weight": 0.10},
+    "Clothing":     {"weight": 0.15},
+    "Gift Cards":   {"weight": 0.05},
+    "Healthcare":   {"weight": 0.07},
+    "Other":        {"weight": 0.03},
+}
+
 # Transaction amount cluster data for transaction generation
 TRANSACTION_CLUSTER_DATA = {
     "Mini Level Spending" : {"min" : 0.50, "max" : 10, "weight" : 0.35, "distribution_function" : "random"},

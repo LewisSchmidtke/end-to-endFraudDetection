@@ -113,7 +113,8 @@ class PaymentMethodGenerator:
             "user_id" : user_id,
             "payment_method" : payment_method_type,
             "service_provider" :payment_method_provider,
-            "payment_is_active" : 1 # Set default value here
+            "payment_is_active" : 1, # We set default value here
+            "created_at": datetime.now()
         }
 
         return payment_method_info
@@ -132,6 +133,8 @@ class MerchantGenerator:
 
         # Define merchant data and validate weights in unpack_weighted_dict
         self.merchant_rating, self.merchant_rating_weights = util.unpack_weighted_dict(const.MERCHANT_DATA)
+        self.merchant_categories, self.merchant_category_weights = util.unpack_weighted_dict(
+            const.MERCHANT_CATEGORY_DATA)
 
     def generate_merchant(self) -> dict:
         """
@@ -142,11 +145,13 @@ class MerchantGenerator:
         """
         merchant_rating = random.choices(self.merchant_rating, weights=self.merchant_rating_weights, k=1)[0]
         country = random.choice(self.country_list) # No need for weighted choice here, international company distribution
+        merchant_category = random.choices(self.merchant_categories, weights=self.merchant_category_weights, k=1)[0]
 
         merchant_info = {
-            "name" : self.FakeData.company(),
-            "rating" : merchant_rating,
-            "country" : country,
+            "name": self.FakeData.company(),
+            "rating": merchant_rating,
+            "country": country,
+            "category": merchant_category,
         }
 
         return merchant_info

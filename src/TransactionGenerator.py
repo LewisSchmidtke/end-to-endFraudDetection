@@ -47,20 +47,21 @@ class TransactionGenerator:
         self.PMG = PaymentMethodGenerator()
         self.DBM = DatabaseManager()
 
-    def _get_active_payment_method(self, user_id: int) -> dict:
+    def _get_active_payment_method(self, user_id: int, payment_creation: datetime) -> dict:
         """
         Will fetch an active payment method from the users stored payment methods. If all methods are deactivated,
         a new payment method will be added to the users account.
 
         Args:
             user_id (int): The id from whom a payment method is fetched.
-
+            payment_creation (datetime): The fallback datetime for when no active payment method is available.
+            Will then create a new payment method at that datetime.
         Returns:
             dict: A dictionary with the necessary information about the active payment method
         """
         active_payment_method = self.DBM.fetch_active_payment_method(user_id=user_id)
         if active_payment_method is None:
-            new_payment_method = self.PMG.generate_payment_method(user_id=user_id)
+            new_payment_method = self.PMG.generate_payment_method(user_id=user_id, generated_at=payment_creation)
             self.DBM.insert_payment_method(new_payment_method)
             active_payment_method = self.DBM.fetch_active_payment_method(user_id=user_id)
 
@@ -295,6 +296,7 @@ class TransactionGenerator:
         user_id: int,
         device_id: int,
         merchant_id: int,
+        user_created_at: datetime,
         is_fraud: int | None = None,
         set_fraud_type: str | None = None,
         conversion_rates: dict | None = None,
@@ -314,12 +316,12 @@ class TransactionGenerator:
             user_id (int): User ID for whom the pattern will be generated
             device_id (int): Device ID from a user which is linked to the pattern
             merchant_id (int): Merchant ID that is associated with the pattern
+            user_created_at (datetime): User created datetime
             is_fraud (int | None): 0/1 to set if a pattern should be fraudulent or not
             set_fraud_type (str | None): Specific fraud type for which a pattern should be generated.
             Has to be set in combination with is_fraud = 1. That combination forces a pattern of that type to be generated.
             conversion_rates (dict | None): Current conversion rates in dict format. Can be left empty,
             as initial conversion rates are set in class attribute.
-
         Returns:
             List[dict]: List of transactions in the pattern. List entries are dictionaries with the relevant information
             for the specific transaction
@@ -332,16 +334,15 @@ class TransactionGenerator:
         else:
             fraudulent_transaction_classifier, fraud_type = self._generate_transaction_type()
 
-        print(fraudulent_transaction_classifier, fraud_type)
-
         TC = self._generate_transaction_context(fraud_type=fraud_type, user_id=user_id, device_id=device_id,
                                                 merchant_id=merchant_id)
+
+        transaction_start_time = util.generate_random_timestamp_in_range(user_created_at, datetime.now())
 
         if not fraudulent_transaction_classifier:
             target_successful_transactions = random.randint(1, 3)
             successful_transactions = 0
             transaction_pattern = []
-            transaction_start_time = datetime.now()
 
             # Fixed transaction channel as it is unlikely to buy something in the store while also buying sth online
             transaction_channel = random.choices(["Online", "Local"], [0.7, 0.3])[0]
@@ -355,7 +356,7 @@ class TransactionGenerator:
                 transaction_start_time = transaction_start_time + timedelta(seconds=transaction_delta_seconds)
                 TC.base_timestamp = transaction_start_time
 
-                active_payment_method = self._get_active_payment_method(user_id=user_id)
+                active_payment_method = self._get_active_payment_method(user_id=user_id, payment_creation=transaction_start_time)
                 TC.payment_id = active_payment_method["payment_method_id"]
 
                 local_amount, usd_amount, TC = self._generate_transaction_amount_local_currency(TC)
@@ -379,7 +380,6 @@ class TransactionGenerator:
 
         if fraud_type == "Card Probing":
             transaction_pattern = []
-            transaction_start_time = datetime.now()
 
             for k in range(number_of_transactions_in_pattern):
                 # Between 30 and 90 seconds per attempt, putting in new card numbers and pin
@@ -389,7 +389,10 @@ class TransactionGenerator:
                     const.FRAUD_TYPE_DATA[fraud_type]["max_time_seconds"]
                 )
 
-                payment_method_info = self.PMG.generate_payment_method(user_id) # Create new payment method for user
+                transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
+                TC.base_timestamp = transaction_start_time
+
+                payment_method_info = self.PMG.generate_payment_method(user_id, generated_at=transaction_start_time) # Create new payment method for user
                 TC.payment_id = self.DBM.insert_payment_method(payment_method_info)
 
                 # Choose random transaction status
@@ -397,9 +400,6 @@ class TransactionGenerator:
 
                 if TC.transaction_status == const.DECLINED:
                     self.DBM.deactivate_payment_method(TC.payment_id)
-
-                transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
-                TC.base_timestamp = transaction_start_time
 
                 local_currency_amount, usd_amount, TC = self._generate_transaction_amount_local_currency(
                     transaction_context=TC,
@@ -416,9 +416,8 @@ class TransactionGenerator:
 
         elif fraud_type == "Botting":
             transaction_pattern = []
-            transaction_start_time = datetime.now()
 
-            active_payment_method = self._get_active_payment_method(user_id=user_id)
+            active_payment_method = self._get_active_payment_method(user_id=user_id, payment_creation=transaction_start_time)
             TC.payment_id = active_payment_method["payment_method_id"]
 
             local_amount, usd_amount, TC = self._generate_transaction_amount_local_currency(
@@ -465,8 +464,8 @@ class TransactionGenerator:
         else:
             raise ValueError(f"Fraud type {fraud_type} is not supported, See keys in FRAUD_TYPE_DATA for possible values.")
 
+    @staticmethod
     def _generate_transaction_context(
-            self,
             fraud_type: str | None,
             user_id: int,
             device_id: int,
@@ -490,7 +489,6 @@ class TransactionGenerator:
             merchant_id (int): Merchant id which is associated with the transaction context.
             payment_id (int | None): Optional payment id which is associated with the transaction context.
             Optional because it has to be dynamic for certain fraud types.
-
         Returns:
             TransactionContext : TransactionContext instance with static values inserted.
 

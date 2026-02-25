@@ -22,12 +22,14 @@ class UserGenerator:
         self.email_data = const.EMAIL_DATA
         self.email_providers, self.email_provider_weights = util.unpack_weighted_dict(self.email_data)
 
-    def generate_user(self) -> dict:
+    def generate_user(self, generated_at: datetime) -> dict:
         """
         Generates a new device for a selected user. Device info consists of the device type, and a first and last use
         timestamp. During creation first and last use timestamp are similar. Last use can be updated through the function
         'update_device_use_data' in DatabaseManager.
 
+        Args:
+            generated_at (int): Timestamp of when this user was created.
         Returns:
             dict: user information, with keys: name, email, country, city, latitude, longitude, created_at
         """
@@ -44,7 +46,7 @@ class UserGenerator:
             "city" : city,
             "latitude" : lat,
             "longitude" : lon,
-            "created_at" : datetime.now(),
+            "created_at" : generated_at,
         }
 
         return main_user_info
@@ -57,7 +59,7 @@ class DeviceGenerator:
     def __init__(self):
         self.device_types = ["mobile","desktop","tablet"] # random.choice doesn't take a set as input
 
-    def generate_device(self, user_id: int) -> dict:
+    def generate_device(self, user_id: int, generated_at: datetime) -> dict:
         """
         Generates a new device for a selected user. Device info consists of the device type, and a first and last use
         timestamp. During creation first and last use timestamp are similar. Last use can be updated through the function
@@ -65,18 +67,17 @@ class DeviceGenerator:
 
         Args:
             user_id (int): ID of a specific user.
-
+            generated_at (int): Timestamp of when this device was added to the user.
         Returns:
             dict: user device information, with keys: user_id, device_type, first_used, last_used
         """
-        first_used = last_used = datetime.now()
         device_type = random.choice(self.device_types) # Choose random device type, currently no weights needed
 
         user_device_info = {
             "user_id" : user_id,
             "device_type" : device_type,
-            "first_used" : first_used,
-            "last_used" : last_used,
+            "first_used" : generated_at,
+            "last_used" : generated_at,
         }
 
         return user_device_info
@@ -96,13 +97,13 @@ class PaymentMethodGenerator:
         # Define payment providers and validate weights in unpack_weighted_dict
         self.payment_providers, self.payment_providers_weights = util.unpack_weighted_dict(const.PAYMENT_PROVIDER_DATA)
 
-    def generate_payment_method(self, user_id: int) -> dict:
+    def generate_payment_method(self, user_id: int, generated_at: datetime) -> dict:
         """
         Generates a new payment method for a selected user. Payment method consists of payment method type and the
         payment method provider
         Args:
             user_id (int): ID of a specific user.
-
+            generated_at (int): Timestamp of when this payment method was added to the user.
         Returns:
             dict: Payment method information, with keys: user_id, payment_method, service_provider
         """
@@ -114,7 +115,7 @@ class PaymentMethodGenerator:
             "payment_method" : payment_method_type,
             "service_provider" :payment_method_provider,
             "payment_is_active" : 1, # We set default value here
-            "created_at": datetime.now()
+            "created_at": generated_at
         }
 
         return payment_method_info

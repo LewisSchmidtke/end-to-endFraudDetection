@@ -251,3 +251,40 @@ class DatabaseManager:
                     conn.rollback()
                     print(f"Error deactivating payment method: {e}")
                     raise
+
+    def fetch_random_merchant_id(self):
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        SELECT merchant_id 
+                        FROM merchants
+                        ORDER BY RANDOM()
+                        LIMIT 1;
+                    """
+                    cursor.execute(query)
+                    result = cursor.fetchone()
+
+                    return result[0] if result else None
+
+                except Exception as e:
+                    print(f"Error fetching merchant_id: {e}")
+                    raise
+
+    def fetch_all_merchant_ids(self):
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        SELECT merchant_id 
+                        FROM merchants;
+                    """
+                    cursor.execute(query)
+                    results = cursor.fetchall()
+
+                    return [row[0] for row in results]
+
+                except Exception as e:
+                    print(f"Error fetching merchant_id: {e}")
+
+                    raise

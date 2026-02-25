@@ -1,6 +1,14 @@
 from pyspark.sql import SparkSession
 
 def create_spark_session(app_name: str = "FraudDetection") -> SparkSession:
+    """
+    Create a SparkSession object.
+
+    Args:
+        app_name: Name of the session.
+    Returns:
+        SparkSession: The created SparkSession object.
+    """
     spark = (
         SparkSession.builder
         .appName(app_name)

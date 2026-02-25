@@ -1,4 +1,6 @@
 import math
+from datetime import datetime, timedelta
+import random
 
 
 def unpack_weighted_dict(distribution_data: dict) -> tuple[list, list]:
@@ -36,3 +38,29 @@ def confirm_weights(weight_list: list, tolerance: float=1e-9) -> None:
     # use math.isclose to account for potential rounding errors with floating point numbers.
     if not math.isclose(total_weight, 1.0, abs_tol=tolerance):
         raise ValueError(f"Weighting must sum to 1, got {total_weight}")
+
+
+def generate_random_past_timestamp(months: int=12) -> datetime:
+    """
+    Generates a random past timestamp in the past x months.
+    Args:
+        months (int): Number of months prior that will be considered for the generation of the past timestamp.
+    Returns:
+        datetime: The generated past timestamp.
+    """
+    current_stamp = datetime.now()
+    start_stamp = current_stamp - timedelta(days=months * 30)
+    return start_stamp + timedelta(seconds=random.randint(0, int((current_stamp - start_stamp).total_seconds())))
+
+
+def generate_random_timestamp_in_range(start: datetime, end: datetime) -> datetime:
+    """
+    Generates a random timestamp in a defined range.
+    Args:
+        start (datetime): Datetime object of the lower bound
+        end (datetime): Datetime object of the upper bound
+    Returns:
+        datetime: The generated timestamp in range.
+    """
+    random_seconds = random.randint(0, int((end - start).total_seconds()))
+    return start + timedelta(seconds=random_seconds)

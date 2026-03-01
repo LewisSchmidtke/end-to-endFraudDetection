@@ -296,7 +296,7 @@ class TransactionGenerator:
         user_id: int,
         device_id: int,
         merchant_id: int,
-        user_created_at: datetime,
+        pattern_start_time: datetime,
         is_fraud: int | None = None,
         set_fraud_type: str | None = None,
         conversion_rates: dict | None = None,
@@ -316,7 +316,7 @@ class TransactionGenerator:
             user_id (int): User ID for whom the pattern will be generated
             device_id (int): Device ID from a user which is linked to the pattern
             merchant_id (int): Merchant ID that is associated with the pattern
-            user_created_at (datetime): User created datetime
+            pattern_start_time (datetime): datetime object of the pattern start
             is_fraud (int | None): 0/1 to set if a pattern should be fraudulent or not
             set_fraud_type (str | None): Specific fraud type for which a pattern should be generated.
             Has to be set in combination with is_fraud = 1. That combination forces a pattern of that type to be generated.
@@ -337,7 +337,10 @@ class TransactionGenerator:
         TC = self._generate_transaction_context(fraud_type=fraud_type, user_id=user_id, device_id=device_id,
                                                 merchant_id=merchant_id)
 
-        transaction_start_time = util.generate_random_timestamp_in_range(user_created_at, datetime.now())
+        # We now assign it directly because we generate chronological timestamps in generate_data.py, previously we
+        # accidentally called generate_random_timestamp_in_range which had the chance to generate timestamp prior to the
+        # pattern start time: transaction_start_time = util.generate_random_timestamp_in_range(user_created_at, datetime.now())
+        transaction_start_time = pattern_start_time
 
         if not fraudulent_transaction_classifier:
             target_successful_transactions = random.randint(1, 3)

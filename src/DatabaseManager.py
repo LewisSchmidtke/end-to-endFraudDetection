@@ -83,28 +83,6 @@ class DatabaseManager:
                     raise
 
 
-    def update_device_use_data(self, user_id, device_id):
-        with self.establish_connection() as conn:
-            with conn.cursor() as cursor:
-                try:
-                    query = """
-                        UPDATE user_devices SET 
-                        last_used = %s
-                        WHERE user_id = %s AND device_id = %s
-                    """
-                    new_last_used = datetime.now()
-                    cursor.execute(query, (new_last_used, user_id, device_id)) # Update last_used to now
-
-                    if cursor.rowcount == 0: # Check if combination of user and device id were found
-                        print(f"Device {device_id} for user {user_id} was not updated.")
-                    conn.commit()
-
-                except Exception as e:
-                    conn.rollback()
-                    print(f"Error updating database: {e}")
-                    raise
-
-
     def insert_payment_method(self, user_payment_method):
         with self.establish_connection() as conn:
             with conn.cursor() as cursor:
@@ -222,6 +200,7 @@ class DatabaseManager:
                         SELECT *
                         FROM payment_methods
                         WHERE user_id = %s AND payment_is_active = 1
+                        ORDER BY created_at ASC
                         LIMIT 1;
                     """
                     cursor.execute(query, (user_id,))

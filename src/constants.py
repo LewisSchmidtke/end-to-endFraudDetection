@@ -72,7 +72,7 @@ NORMAL_TRANSACTION_DATA = {
 # Min/Max transactions are the minimum and maximum number of transaction that will be generated in the fraudulent pattern
 FRAUD_TYPE_DATA = {
     "Card Probing": {
-        "weight": 0.3,
+        "weight": 0.55,
          "min_transactions" : 3,
          "max_transactions" : 15,
          "min_time_seconds" : 30,
@@ -81,7 +81,7 @@ FRAUD_TYPE_DATA = {
     },
 
     "Botting": {
-        "weight": 0.25,
+        "weight": 0.45,
         "min_transactions" : 1,
         "max_transactions" : 10,
         "min_time_seconds" : 0.5,
@@ -90,7 +90,7 @@ FRAUD_TYPE_DATA = {
     },
 
     "Card Cracking": {
-        "weight": 0.2,
+        "weight": 0, # was 0.2
         "min_transactions" : 3,
         "max_transactions" : 15,
         "min_time_seconds" : 0.5,
@@ -99,7 +99,7 @@ FRAUD_TYPE_DATA = {
     },
 
     "Account Takeover": {
-        "weight": 0.15,
+        "weight": 0, # was 0.15
         "min_transactions" : 3,
         "max_transactions" : 15,
         "min_time_seconds" : 0.5,
@@ -108,7 +108,7 @@ FRAUD_TYPE_DATA = {
     },
 
     "Merchant Switching": {
-        "weight": 0.1,
+        "weight": 0, # was 0.1
         "min_transactions" : 3,
         "max_transactions" : 15,
         "min_time_seconds" : 0.5,
@@ -119,3 +119,22 @@ FRAUD_TYPE_DATA = {
 
 APPROVED = "Approved"
 DECLINED = "Declined"
+
+XGB_PARAMS = {
+    "n_estimators": 200,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "eval_metric": "aucpr", # We use area under precision-recall curve because of our imbalanced dataset
+    "random_state": 23,
+    "n_jobs": -1,
+}
+
+RF_PARAMS = {
+    "n_estimators": 200,
+    "max_depth": 10,
+    "min_samples_leaf": 5,
+    "random_state": 23,
+    "n_jobs": -1,
+}

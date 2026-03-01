@@ -5,6 +5,7 @@ import src.TransactionGenerator as TG
 import src.utility as util
 
 import random
+from datetime import datetime
 
 
 # Initialize all DataGenerator classes
@@ -32,6 +33,7 @@ for m in range(NR_OF_MERCHANTS):
     DBManager.insert_merchant(merchant_data)
 
 merchant_ids = DBManager.fetch_all_merchant_ids()
+now = datetime.now()
 
 for u in range(NR_OF_USERS):
     print(f"Generating User: {u}")
@@ -45,9 +47,15 @@ for u in range(NR_OF_USERS):
     user_payment_method = PaymentMethodGen.generate_payment_method(user_id, generated_timestamp)
     DBManager.insert_payment_method(user_payment_method)
 
+    pattern_timestamp = generated_timestamp
     for _ in range(random.randint(MIN_PATTERNS, MAX_PATTERNS)):
-        # Generated_timestamp equal to user created at
         merchant_id = random.choice(merchant_ids)
-        data = TransactionGen.generate_transaction_pattern(user_id, device_id, merchant_id, user_created_at=generated_timestamp)
+        # Change in timestamp generation due to a reoccurring bug:
+        # The bug occurred when multiple transactions for a user were created and the second transaction has a timestamp
+        # previous to the first created transaction and the payment method of the first transaction got declined. Then
+        # a new payment method got created at transaction timestamp that is in the future relative to the second created
+        # transaction. So now we generate transactions in chronological order.
+        pattern_timestamp = util.generate_random_timestamp_in_range(pattern_timestamp, now)
+        data = TransactionGen.generate_transaction_pattern(user_id, device_id, merchant_id, pattern_start_time=pattern_timestamp)
         for transaction in data:
             DBManager.insert_transaction(transaction)

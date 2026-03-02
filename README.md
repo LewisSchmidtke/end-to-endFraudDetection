@@ -21,9 +21,11 @@ The system design can be seen here:
 ├── db/
 │   └── init.sql                        # PostgreSQL schema (users, devices, payments, merchants, transactions)
 ├── ml/
-│   └── models/
-│       ├── xgb.py                      # XGBoost classifier builder
-│       └── random_forest.py            # Random Forest classifier builder
+│   ├── models/
+│   │   ├── xgb.py                      # XGBoost classifier builder
+│   │   ├── random_forest.py            # Random Forest classifier builder
+│   │   └── pytorch_model.py            # FraudNet built with PyTorch
+│   └── datasets.py                     # FraudDataset and Torch subvariant
 ├── spark/
 │   ├── features/
 │   │   ├── velocity_features.py        # Transaction velocity (1h, 5min windows)

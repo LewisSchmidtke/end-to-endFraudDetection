@@ -348,7 +348,7 @@ class TransactionGenerator:
             transaction_pattern = []
 
             # Fixed transaction channel as it is unlikely to buy something in the store while also buying sth online
-            transaction_channel = random.choices(["Online", "Local"], [0.7, 0.3])[0]
+            transaction_channel = random.choices([const.ONLINE_TX_CHANNEL, const.LOCAL_TX_CHANNEL], [0.7, 0.3])[0]
             TC.channel = transaction_channel
 
             while successful_transactions < target_successful_transactions:
@@ -515,7 +515,7 @@ class TransactionGenerator:
             return tc
 
         if fraud_type in {"Card Probing", "Botting"}:
-            tc.channel = "online"
+            tc.channel = const.ONLINE_TX_CHANNEL
 
             # Probing happens at mini amounts, whereas botting happens in low tier.
             if fraud_type == "Card Probing":

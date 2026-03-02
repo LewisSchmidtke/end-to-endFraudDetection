@@ -1,3 +1,11 @@
+# String values for approved and declined transactions
+APPROVED = "Approved"
+DECLINED = "Declined"
+
+# String values for online and local transaction channel
+ONLINE_TX_CHANNEL = "Online"
+LOCAL_TX_CHANNEL = "Local"
+
 # Country data for User, Merchant and Transaction generation
 COUNTRY_DATA = {
     "US" : {"currency" : "USD", "weight" : 0.5},
@@ -117,9 +125,7 @@ FRAUD_TYPE_DATA = {
     },
 }
 
-APPROVED = "Approved"
-DECLINED = "Declined"
-
+# XGB parameters for building the model
 XGB_PARAMS = {
     "n_estimators": 200,
     "max_depth": 6,
@@ -131,10 +137,33 @@ XGB_PARAMS = {
     "n_jobs": -1,
 }
 
+# Random forest parameters for building the model
 RF_PARAMS = {
     "n_estimators": 200,
     "max_depth": 10,
     "min_samples_leaf": 5,
     "random_state": 23,
     "n_jobs": -1,
+}
+
+# Pytorch NN parameters for building the model
+PYTORCH_PARAMS = {
+    "dropout_val" : 0.2
+}
+
+# Dataset params
+DATASET_PARAMS = {
+    "test_size" : 0.2,
+    "drop_columns" : [
+        "transaction_id",
+        "transaction_timestamp",
+        "transaction_amount_local",
+        "transaction_currency",
+        "transaction_country",
+        "user_id",
+        "device_id",
+        "merchant_id",
+        "payment_id",
+        "fraud_type",
+    ]
 }

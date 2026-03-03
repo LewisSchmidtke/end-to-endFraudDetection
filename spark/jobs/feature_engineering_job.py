@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from pyspark.sql import SparkSession
 
 from spark.utils.spark_session import create_spark_session
@@ -8,8 +9,11 @@ from spark.features.amount_features import compute_amount_features
 from spark.features.behavioral_features import compute_behavioral_features
 from spark.features.device_features import compute_device_features
 
+import src.constants as const
 
-OUTPUT_PATH = "data/features/transactions_features.parquet"
+
+ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_PATH = ROOT / const.FEATURE_PATH
 
 
 def run_batch(spark_sess: SparkSession) -> None:

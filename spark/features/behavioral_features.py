@@ -62,12 +62,12 @@ def compute_behavioral_features(df: DataFrame, merchants_df: DataFrame) -> DataF
     ######################################### NEW MERCHANT CATEGORY (30 day) ##########################################
     # For each transaction we want to know: has this user visited this merchant category in the last 30 days
     # We use -1 as the upper bound to exclude the current row | 30 days = 30 * 24 * 60 * 60 = 2592000 seconds
-    user_7d_window_excl = (Window.partitionBy("user_id").orderBy("ts_unix").rangeBetween(-2592000, -1))
+    user_30d_window_excl = (Window.partitionBy("user_id").orderBy("ts_unix").rangeBetween(-2592000, -1))
 
     # Collect all merchant categories seen in the last 30 days into an array
     df = df.withColumn(
         "_seen_categories_30d",
-        F.collect_set("merchant_category").over(user_7d_window_excl)
+        F.collect_set("merchant_category").over(user_30d_window_excl)
     )
 
     # Check if current merchant category is NOT in the seen categories array -> sets 1 if not in seen merchants

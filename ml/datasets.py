@@ -110,8 +110,7 @@ class FraudDataset:
         """
         self.df = pd.get_dummies(self.df, columns=[column_name], prefix=column_name, dtype=int)
 
-    @staticmethod
-    def _apply_standard_scaler(x_train: np.ndarray, x_test:np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _apply_standard_scaler(self, x_train: np.ndarray, x_test:np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Applies standard scaling to x train and test data. Applies fit_transform to x_train and transform to x_test.
 
@@ -121,9 +120,9 @@ class FraudDataset:
         Returns:
             Tuple[np.ndarray, np.ndarray]: scaled x_train, x_test
         """
-        scaler = StandardScaler()
-        x_train = scaler.fit_transform(x_train)
-        x_test = scaler.transform(x_test) # We don't want to influence our test data so transform with params calculated from x_train
+        self.scaler = StandardScaler()
+        x_train = self.scaler.fit_transform(x_train)
+        x_test = self.scaler.transform(x_test) # We don't want to influence our test data so transform with params calculated from x_train
         return x_train, x_test
 
     @staticmethod

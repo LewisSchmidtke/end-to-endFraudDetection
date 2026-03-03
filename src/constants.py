@@ -172,3 +172,10 @@ DATASET_PARAMS = {
         "fraud_type",
     ]
 }
+
+# plotting colors
+COLORS = {
+    "xgb": "#FF750D", # neon orange
+    "rf": "#1BD121", # neon green
+    "pytorch": "#D11B7C", # neon pink
+}

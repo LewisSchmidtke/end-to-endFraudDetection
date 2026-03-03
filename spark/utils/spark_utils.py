@@ -1,4 +1,17 @@
+from pyspark.sql import Row
 from pyspark.sql import SparkSession
+
+def convert_dicts_to_spark_rows(rows: list[dict]) -> list[Row]:
+    """
+    Converts a list of dictionaries to a list of Spark Row objects for use with SparkSession.createDataFrame.
+
+    Args:
+        rows (list[dict]): List of dictionaries to convert.
+    Returns:
+        list[Row]: List of Spark Row objects.
+    """
+    return [Row(**row) for row in rows]
+
 
 def create_spark_session(app_name: str = "FraudDetection", master: str = "local[*]") -> SparkSession:
     """

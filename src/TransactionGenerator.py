@@ -18,17 +18,17 @@ class TransactionContext:
         user_id: int
         device_id: int
         merchant_id: int
-        currency: str
-        country: str
+        transaction_currency: str
+        transaction_country: str
         is_fraudulent: int
-        fraud_type: str | None
+        fraud_type: str
 
         # Fraud-type specific fields -> set to None initially as they are dynamically set for each fraud type
-        channel: str | None = None
+        transaction_channel: str | None = None
         transaction_cluster: str | None = None
         payment_id: int | None = None
         transaction_status: str | None = None
-        base_timestamp: datetime | None = None
+        transaction_timestamp: datetime | None = None
 
 
 class TransactionGenerator:
@@ -91,10 +91,8 @@ class TransactionGenerator:
             ValueError: If fraud type is not recognized, the set approved_rate is above 1 or payment_method and
             usd_amount is None when determining the status for normal transactions
         """
-        fraud_types = set(const.FRAUD_TYPE_DATA.keys())
-
         if is_fraudulent:
-            if fraud_type not in fraud_types:
+            if fraud_type not in const.FRAUD_TYPE_DATA:
                 raise ValueError(f"The status for a fraudulent transaction can not be determined for fraud type {fraud_type}")
 
             set_approved_rate = const.FRAUD_TYPE_DATA[fraud_type]["transaction_approved_rate"] # Get the rates from constants
@@ -112,7 +110,7 @@ class TransactionGenerator:
             raise ValueError("Payment method and amount cannot be None for non-fraudulent transactions.")
 
         # Logic:
-        #- High Level spending: Only approve if payment provider is renowned AND method is credit/debit card
+        # - High Level spending: Only approve if payment provider is renowned AND method is credit/debit card
         # - All other spending: Approve with 98% probability (2% random decline rate)
         if usd_amount >= const.TRANSACTION_CLUSTER_DATA["High Level Spending"]["min"]:
             if payment_method["payment_service_provider"] == "Renowned" and payment_method["payment_method"] in {"credit_card", "debit_card"}:
@@ -233,11 +231,11 @@ class TransactionGenerator:
         # Get current conversion rates, or fallback to initial conversion rates
         active_conversion_rates = conversion_rates or self.conversion_rates
 
-        if transaction_context.currency is None:
+        if transaction_context.transaction_currency is None:
             # Validate currency weights and select a transaction currency
             currencies = [value["currency"] for value in const.COUNTRY_DATA.values()]
             _, currency_weights = util.unpack_weighted_dict(const.COUNTRY_DATA)
-            transaction_context.currency = random.choices(currencies, weights=currency_weights, k=1)[0]
+            transaction_context.transaction_currency = random.choices(currencies, weights=currency_weights, k=1)[0]
 
         if set_transaction_amount_dollar is None:
             dollar_amount, transaction_context = self._generate_transaction_amount_dollar(transaction_context)
@@ -249,9 +247,9 @@ class TransactionGenerator:
         # like this {"conversion_rates" : {"currency" : "rate"}}
         # TODO: Think about a function that does this.
         try:
-            transaction_amount_local_currency = round(active_conversion_rates["conversion_rates"][transaction_context.currency] * dollar_amount, 2)
+            transaction_amount_local_currency = round(active_conversion_rates["conversion_rates"][transaction_context.transaction_currency] * dollar_amount, 2)
         except KeyError:
-            transaction_amount_local_currency = round(active_conversion_rates[transaction_context.currency] * dollar_amount, 2)
+            transaction_amount_local_currency = round(active_conversion_rates[transaction_context.transaction_currency] * dollar_amount, 2)
 
         return transaction_amount_local_currency, dollar_amount, transaction_context
 
@@ -278,14 +276,10 @@ class TransactionGenerator:
         # TransactionContext needs to be validated, otherwise SQL insertion will fail
         missing = [k for k, v in context_data.items() if v is None]
         if missing:
-            raise ValueError(
-                f"TransactionContext has missing fields: {', '.join(missing)}"
-            )
+            raise ValueError(f"TransactionContext has missing fields: {', '.join(missing)}")
 
         context_data["transaction_amount_local"] = local_amount
         context_data["transaction_amount_usd"] = usd_amount
-        # Convert None to string, None if the transaction is not fraudulent
-        context_data["fraud_type_str"] = "None" if transaction_context.fraud_type is None else transaction_context.fraud_type
 
         return context_data
 
@@ -349,7 +343,7 @@ class TransactionGenerator:
 
             # Fixed transaction channel as it is unlikely to buy something in the store while also buying sth online
             transaction_channel = random.choices([const.ONLINE_TX_CHANNEL, const.LOCAL_TX_CHANNEL], [0.7, 0.3])[0]
-            TC.channel = transaction_channel
+            TC.transaction_channel = transaction_channel
 
             while successful_transactions < target_successful_transactions:
                 transaction_delta_seconds = random.uniform(
@@ -357,7 +351,7 @@ class TransactionGenerator:
                     const.NORMAL_TRANSACTION_DATA["max_time_seconds"]
                 )
                 transaction_start_time = transaction_start_time + timedelta(seconds=transaction_delta_seconds)
-                TC.base_timestamp = transaction_start_time
+                TC.transaction_timestamp = transaction_start_time
 
                 active_payment_method = self._get_active_payment_method(user_id=user_id, payment_creation=transaction_start_time)
                 TC.payment_id = active_payment_method["payment_method_id"]
@@ -393,7 +387,7 @@ class TransactionGenerator:
                 )
 
                 transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
-                TC.base_timestamp = transaction_start_time
+                TC.transaction_timestamp = transaction_start_time
 
                 payment_method_info = self.PMG.generate_payment_method(user_id, generated_at=transaction_start_time) # Create new payment method for user
                 TC.payment_id = self.DBM.insert_payment_method(payment_method_info)
@@ -440,7 +434,7 @@ class TransactionGenerator:
                 # is due to rate limits and not wrong payment when botting
 
                 transaction_start_time = transaction_start_time + timedelta(seconds=time_delta_seconds)
-                TC.base_timestamp = transaction_start_time
+                TC.transaction_timestamp = transaction_start_time
 
                 transaction_data = self._generate_full_single_transaction_data(
                     transaction_context=TC, local_amount=local_amount, usd_amount=usd_amount
@@ -482,16 +476,14 @@ class TransactionGenerator:
         Static values (set here) for all transactions: user_id, device_id, merchant_id, currency, country, is_fraudulent and fraud_type.
         Static values (set here) for specific types: channel (for Card Probing/Botting), transaction_cluster (for Card Probing/Botting)
 
-        Dynamic values (set later): base_timestamp, payment_id, transaction_status, (channel and transaction_cluster for other types)
+        Dynamic values (set later): transaction_timestamp, payment_id, transaction_status, (transaction_channel and transaction_cluster for other types)
 
         Args:
-            fraud_type (str): The type of fraud for which the context should be generated. Important to differentiate
-            between static and dynamic attributes.
+            fraud_type (str): The type of fraud for which the context should be generated. Important to differentiate between static and dynamic attributes.
             user_id (int): User id which is associated with the transaction context.
             device_id (int): Device id which is associated with the transaction context.
             merchant_id (int): Merchant id which is associated with the transaction context.
-            payment_id (int | None): Optional payment id which is associated with the transaction context.
-            Optional because it has to be dynamic for certain fraud types.
+            payment_id (int | None): Optional payment id which is associated with the transaction context. Optional because it has to be dynamic for certain fraud types.
         Returns:
             TransactionContext : TransactionContext instance with static values inserted.
 
@@ -515,7 +507,7 @@ class TransactionGenerator:
             return tc
 
         if fraud_type in {"Card Probing", "Botting"}:
-            tc.channel = const.ONLINE_TX_CHANNEL
+            tc.transaction_channel = const.ONLINE_TX_CHANNEL
 
             # Probing happens at mini amounts, whereas botting happens in low tier.
             if fraud_type == "Card Probing":

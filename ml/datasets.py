@@ -4,6 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import SMOTE
+import torch
 import torch.utils.data as tud
 
 import src.constants as const
@@ -161,7 +162,9 @@ class TorchFraudDataset(FraudDataset, tud.Dataset):
         super().__init__(data_path, smote, include_transaction_status, test_size, drop_columns)
 
     def __len__(self) -> int:
-        pass
+        return len(self.X_train)
 
-    def __getitem__(self, item):
-        pass
+    def __getitem__(self, idx:int) -> tuple[torch.Tensor, torch.Tensor]:
+        X_sample = torch.tensor(self.X_train[idx], dtype=torch.float32)
+        y_sample = torch.tensor(self.y_train[idx], dtype=torch.float32).unsqueeze(0)
+        return X_sample, y_sample

@@ -149,17 +149,17 @@ class DatabaseManager:
                     cursor.execute(query, (
                         transaction_data["transaction_amount_local"],
                         transaction_data["transaction_amount_usd"],
-                        transaction_data["base_timestamp"],
+                        transaction_data["transaction_timestamp"],
                         transaction_data["transaction_status"],
-                        transaction_data["currency"],
-                        transaction_data["country"],
-                        transaction_data["channel"],
+                        transaction_data["transaction_currency"],
+                        transaction_data["transaction_country"],
+                        transaction_data["transaction_channel"],
                         transaction_data["user_id"],
                         transaction_data["merchant_id"],
                         transaction_data["payment_id"],
                         transaction_data["device_id"],
                         transaction_data["is_fraudulent"],
-                        transaction_data["fraud_type_str"],
+                        transaction_data["fraud_type"],
                     ))
                     transaction_id = cursor.fetchone()[0]
 
@@ -170,26 +170,6 @@ class DatabaseManager:
                 except Exception as e:
                     conn.rollback()
                     print(f"Error updating database: {e}")
-                    raise
-
-    def fetch_random_payment_id(self, user_id):
-        with self.establish_connection() as conn:
-            with conn.cursor() as cursor:
-                try:
-                    query = """
-                        SELECT payment_method_id
-                        FROM payment_methods
-                        WHERE user_id = %s
-                        ORDER BY RANDOM()
-                        LIMIT 1;
-                    """
-                    cursor.execute(query, (user_id,))
-                    result = cursor.fetchone()
-
-                    return result[0] if result else None
-
-                except Exception as e:
-                    print(f"Error fetching payment_id: {e}")
                     raise
 
     def fetch_active_payment_method(self, user_id):
@@ -212,6 +192,24 @@ class DatabaseManager:
                     print(f"Error fetching payment_id: {e}")
                     raise
 
+    def fetch_payment_info(self, payment_id: int) -> dict:
+        with self.establish_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                try:
+                    query = """
+                        SELECT *
+                        FROM payment_methods
+                        WHERE payment_method_id = %s;
+                    """
+                    cursor.execute(query, (payment_id,))
+                    result = cursor.fetchone()
+
+                    return result if result else None
+
+                except Exception as e:
+                    print(f"Error fetching payment info for payment_id {payment_id}: {e}")
+                    raise
+
     def deactivate_payment_method(self, payment_id):
         with self.establish_connection() as conn:
             with conn.cursor() as cursor:
@@ -231,25 +229,6 @@ class DatabaseManager:
                     print(f"Error deactivating payment method: {e}")
                     raise
 
-    def fetch_random_merchant_id(self):
-        with self.establish_connection() as conn:
-            with conn.cursor() as cursor:
-                try:
-                    query = """
-                        SELECT merchant_id 
-                        FROM merchants
-                        ORDER BY RANDOM()
-                        LIMIT 1;
-                    """
-                    cursor.execute(query)
-                    result = cursor.fetchone()
-
-                    return result[0] if result else None
-
-                except Exception as e:
-                    print(f"Error fetching merchant_id: {e}")
-                    raise
-
     def fetch_all_merchant_ids(self):
         with self.establish_connection() as conn:
             with conn.cursor() as cursor:
@@ -266,4 +245,109 @@ class DatabaseManager:
                 except Exception as e:
                     print(f"Error fetching merchant_id: {e}")
 
+                    raise
+
+    def fetch_random_user_id(self) -> int:
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        SELECT user_id
+                        FROM users
+                        ORDER BY RANDOM()
+                        LIMIT 1;
+                    """
+                    cursor.execute(query)
+                    result = cursor.fetchone()
+
+                    return result[0] if result else None
+
+                except Exception as e:
+                    print(f"Error fetching user_id: {e}")
+                    raise
+
+    def fetch_random_device_id(self, user_id: int) -> int:
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        SELECT device_id
+                        FROM user_devices
+                        WHERE user_id = %s
+                        ORDER BY RANDOM()
+                        LIMIT 1;
+                    """
+                    cursor.execute(query, (user_id,))
+                    result = cursor.fetchone()
+                    return result[0] if result else None
+
+                except Exception as e:
+                    print(f"Error fetching device_id: {e}")
+                    raise
+
+    def fetch_user_transaction_history(self, user_id: int, hours: int) -> list[dict]:
+        with self.establish_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                try:
+                    query = """
+                        SELECT t.user_id, t.device_id, t.transaction_amount_usd, t.transaction_status, t.payment_id,
+                               t.transaction_timestamp, t.transaction_country, t.merchant_id, 
+                               m.merchant_category
+                        FROM transactions t
+                        JOIN merchants m ON t.merchant_id = m.merchant_id
+                        WHERE t.user_id = %s
+                        AND t.transaction_timestamp >= NOW() - INTERVAL '%s hours'
+                        ORDER BY t.transaction_timestamp ASC;
+                    """
+                    cursor.execute(query, (user_id, hours))
+
+                    return cursor.fetchall()
+
+                except Exception as e:
+                    print(f"Error fetching transaction history for user {user_id}: {e}")
+                    raise
+
+    def fetch_device_recent_transactions(self, device_id: int, hours: int) -> list[dict]:
+        with self.establish_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                try:
+                    query = """
+                        SELECT device_id, transaction_timestamp
+                        FROM transactions
+                        WHERE device_id = %s
+                        AND transaction_timestamp >= NOW() - INTERVAL '%s hours'
+                        ORDER BY transaction_timestamp ASC;
+                    """
+                    cursor.execute(query, (device_id, hours))
+
+                    return cursor.fetchall()
+
+                except Exception as e:
+                    print(f"Error fetching recent transactions for device {device_id}: {e}")
+                    raise
+
+    def insert_fraud_alert(self, alert: dict) -> int:
+        with self.establish_connection() as conn:
+            with conn.cursor() as cursor:
+                try:
+                    query = """
+                        INSERT INTO fraud_alerts (transaction_id, user_id, fraud_probability, model_name, alerted_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING alert_id
+                    """
+                    cursor.execute(query, (
+                        alert["transaction_id"],
+                        alert["user_id"],
+                        alert["fraud_probability"],
+                        alert["model_name"],
+                        alert["alerted_at"],
+                    ))
+                    alert_id = cursor.fetchone()[0]
+                    conn.commit()
+
+                    return alert_id
+
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Error inserting fraud alert: {e}")
                     raise

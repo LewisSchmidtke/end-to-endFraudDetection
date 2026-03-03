@@ -4,9 +4,7 @@ from pathlib import Path
 import joblib
 
 from ml.datasets import FraudDataset, TorchFraudDataset
-import ml.models.xgb as xgb_model
-import ml.models.random_forest as rf_model
-import ml.models.pytorch_wrapper as pytorch_wrapper
+from ml.models.model_lib import MODEL_LIB
 
 import src.constants as const
 
@@ -14,14 +12,6 @@ import src.constants as const
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / const.FEATURE_PATH
 MODEL_OUTPUT_DIR = ROOT / const.MODEL_OUTPUT_DIR
-
-# To add a new model: Create a file in ml/models/ with a get_model() function that returns an object with a .fit()
-# method, then add it here.
-MODEL_LIB = {
-    "xgb":     xgb_model,
-    "rf":      rf_model,
-    "pytorch": pytorch_wrapper,
-}
 
 # Functions for class imbalances
 def _class_ratio(y_train: np.ndarray) -> tuple[int, int, float]:

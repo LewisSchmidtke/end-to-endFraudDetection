@@ -11,6 +11,14 @@ DECLINED = "Declined"
 ONLINE_TX_CHANNEL = "Online"
 LOCAL_TX_CHANNEL = "Local"
 
+# Initial data generation values
+INIT_DATA_PARAMS = {
+    "merchants" : 50,
+    "users" : 250,
+    "min_patterns" : 3,
+    "max_patterns" : 12
+}
+
 # Country data for User, Merchant and Transaction generation
 COUNTRY_DATA = {
     "US" : {"currency" : "USD", "weight" : 0.5},

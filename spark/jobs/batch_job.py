@@ -1,8 +1,7 @@
-import argparse
 from pathlib import Path
 from pyspark.sql import SparkSession
 
-from spark.utils.spark_session import create_spark_session
+from spark.utils.spark_utils import create_spark_session
 from spark.utils.db_utils import read_table
 from spark.features.velocity_features import compute_velocity_features
 from spark.features.amount_features import compute_amount_features
@@ -36,26 +35,7 @@ def run_batch(spark_sess: SparkSession) -> None:
     df.write.mode("overwrite").parquet(OUTPUT_PATH)
 
 
-def run_streaming():
-    pass
-
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Feature Engineering Job")
-    parser.add_argument(
-        "--mode",
-        type=str,
-        choices=["batch", "streaming"],
-        default="batch",
-        help="Run mode: batch reads from Postgres, streaming reads from Kafka"
-    )
-    args = parser.parse_args()
-
     spark = create_spark_session(app_name="FraudDetection_FeatureEngineering")
-
-    if args.mode == "batch":
-        run_batch(spark)
-    elif args.mode == "streaming":
-        raise NotImplementedError("Streaming mode not implemented")
-
+    run_batch(spark)
     spark.stop()

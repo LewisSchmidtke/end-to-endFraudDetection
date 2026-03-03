@@ -1,6 +1,7 @@
 # Paths to store features from spark and store models after training
 FEATURE_PATH = "data/features/transactions_features.parquet"
 MODEL_OUTPUT_DIR = "data/models"
+EVALUATION_OUTPUT_DIR = "data/evaluation"
 
 # String values for approved and declined transactions
 APPROVED = "Approved"

@@ -53,6 +53,15 @@ CREATE TABLE transactions (
     fraud_type varchar(255)
 );
 
+CREATE TABLE fraud_alerts (
+    alert_id SERIAL PRIMARY KEY,
+    transaction_id UUID NOT NULL,
+    user_id integer NOT NULL,
+    fraud_probability float,
+    model_name varchar(255),
+    alerted_at timestamp
+);
+
 ALTER TABLE transactions
     ADD CONSTRAINT fk_transaction_user
         FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE RESTRICT;
@@ -76,3 +85,7 @@ ALTER TABLE transactions
 ALTER TABLE user_devices
     ADD CONSTRAINT fk_device_user
         FOREIGN KEY (user_id) REFERENCES users (user_id);
+
+ALTER TABLE fraud_alerts
+    ADD CONSTRAINT fk_alert_transaction
+        FOREIGN KEY (transaction_id) REFERENCES transactions (transaction_id);

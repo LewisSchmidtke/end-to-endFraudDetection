@@ -11,7 +11,7 @@ import src.constants as const
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = ROOT / const.FEATURE_PATH
-MODEL_OUTPUT_DIR = ROOT / const.MODEL_OUTPUT_DIR
+MODEL_DIR = ROOT / const.MODEL_OUTPUT_DIR
 
 # Functions for class imbalances
 def _class_ratio(y_train: np.ndarray) -> tuple[int, int, float]:
@@ -100,13 +100,25 @@ def train(model_name: str, smote: bool = False, include_tx_status: bool = False,
 
     # Build correct path and save
     extension = ".pt" if is_pytorch else ".joblib"
-    path = f"{MODEL_OUTPUT_DIR}/{model_name}{extension}"
+    path = f"{MODEL_DIR}/{model_name}{extension}"
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     if is_pytorch:
         model.save(path)
     else:
         joblib.dump(model, path)
     print(f"Model saved to {path}")
+
+    scaler_path = f"{MODEL_DIR}/{model_name}_scaler.joblib"
+    joblib.dump(dataset.scaler, scaler_path)
+    print(f"Scaler saved to {scaler_path}")
+
+    # We save the feature columns so we can build the correct order when streaming data
+    feature_columns_path = Path(f"{MODEL_DIR}/feature_columns.joblib")
+    if not feature_columns_path.exists():
+        feature_columns = [c for c in dataset.df.columns if c != "is_fraudulent"]
+        joblib.dump(feature_columns, feature_columns_path)
+        print(f"Feature columns saved to {feature_columns_path}")
+
 
 
 def parse_args() -> argparse.Namespace:

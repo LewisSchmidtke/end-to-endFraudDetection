@@ -7,9 +7,11 @@ from pathlib import Path
 from kafka import KafkaProducer
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, from_json
+import pyspark.sql.functions as F
 
 from spark.utils.spark_utils import create_spark_session
 from spark.utils.spark_utils import convert_dicts_to_spark_rows
+from spark.utils.spark_utils import filter_single_transaction
 from spark.utils.message_utils import TRANSACTION_MESSAGE_SCHEMA
 from spark.features.velocity_features import compute_velocity_features
 from spark.features.amount_features import compute_amount_features
@@ -17,8 +19,7 @@ from spark.features.behavioral_features import compute_behavioral_features
 from spark.features.device_features import compute_device_features
 
 from src.DatabaseManager import DatabaseManager
-from src.constants import MODEL_OUTPUT_DIR
-
+from src.constants import MODEL_OUTPUT_DIR, MERCHANT_CATEGORY_DATA, ONLINE_TX_CHANNEL
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -46,24 +47,25 @@ def _compute_streaming_features(
     try:
         # We extract user history from past 720 hours (30 days) as this is the max window length we check with spark
         user_history = dbm.fetch_user_transaction_history(transaction["user_id"], hours=720)
-        # For device history we only extract the last hours as we only need short term device history
-        device_history = dbm.fetch_device_recent_transactions(transaction["device_id"], hours=1)
+        # We need the merchant category for latest transaction
+        merchant_info = dbm.fetch_merchant_info(transaction["merchant_id"])
+        transaction["merchant_category"] = merchant_info["merchant_category"]
 
-        user_history.append(transaction) # Append latest transaction to extracted history
+        transaction_filtered = filter_single_transaction(transaction)
+        user_history.append(transaction_filtered)
 
         # We extract the merchant historical data, because a separate df is needed for 'compute_behavioral_features'
-        merchant_history = [{"merchant_id": r["merchant_id"], "merchant_category": r["merchant_category"]}
-                            for r in user_history]
+        merchant_history = [{"merchant_id": r["merchant_id"], "merchant_category": r["merchant_category"]} for r in user_history]
         # We extract the payment info from the current transaction, because a separate df is needed for device features
         payment_method_history = [
             {"payment_method_id": transaction["payment_id"],
-             "created_at": transaction["payment_created_at"]}
+             "created_at": datetime.fromisoformat(str(transaction["payment_created_at"]))}
         ]
         # We first have to convert the dict into spark native Row types
-        user_and_device_history = convert_dicts_to_spark_rows(user_history + device_history)
+        user_history = convert_dicts_to_spark_rows(user_history)
 
         # Distinct call not on payment because its only 1 row | distinct is equivalent to pandas drop_duplicates()
-        transactions_df = spark.createDataFrame(user_and_device_history).distinct()
+        transactions_df = spark.createDataFrame(user_history).distinct()
         merchants_df = spark.createDataFrame(convert_dicts_to_spark_rows(merchant_history)).distinct()
         payment_methods_df = spark.createDataFrame(convert_dicts_to_spark_rows(payment_method_history))
 
@@ -72,11 +74,25 @@ def _compute_streaming_features(
         df = compute_behavioral_features(df, merchants_df)
         df = compute_device_features(df, payment_methods_df)
 
+        # We need one hot encoding and binary encoding
+        for cat in MERCHANT_CATEGORY_DATA:
+            df = df.withColumn(
+                f"merchant_category_{cat}",
+                F.when(F.col("merchant_category") == cat, 1).otherwise(0).cast("integer")
+            )
+        df = df.drop("merchant_category")
+
+        df = df.withColumn(
+            "transaction_channel",
+            F.when(F.col("transaction_channel") == ONLINE_TX_CHANNEL, 1).otherwise(0).cast("integer")
+        )
+
         # Extract the last row which corresponds to the incoming transaction and build the feature vector from previously
         # saved feature_columns file.
         last_row = df.orderBy("transaction_timestamp").tail(1)[0]
         feature_vector = np.array([last_row[f_column] for f_column in feature_column_list],dtype=np.float32)
 
+        print(f"Feature computation completed for user {transaction.get('user_id')}")
         return feature_vector
 
     except Exception as e:
@@ -125,7 +141,7 @@ def _process_batch(
         scaled = scaler.transform(features.reshape(1, -1))
         fraud_prob = float(model.predict_proba(scaled)[0][1])
         is_fraud = int(fraud_prob >= 0.5)
-
+        print(fraud_prob, is_fraud)
         if is_fraud:
             alert = {
                 "transaction_id": transaction.get("transaction_id"),
@@ -168,7 +184,7 @@ def run_streaming(model_name: str = "xgb") -> None:
     raw_stream = (
         spark.readStream
         .format("kafka")
-        .option("kafka.bootstrap.servers", "kafka:29092")
+        .option("kafka.bootstrap.servers", "localhost:9092")
         .option("subscribe", "transactions")
         .option("startingOffsets", "latest")
         .load()
@@ -180,7 +196,7 @@ def run_streaming(model_name: str = "xgb") -> None:
     )
 
     alert_producer = KafkaProducer(
-        bootstrap_servers="kafka:29092",
+        bootstrap_servers="localhost:9092",
         value_serializer=lambda x: json.dumps(x, default=str).encode("utf-8")
     )
 

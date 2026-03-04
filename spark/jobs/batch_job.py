@@ -11,7 +11,7 @@ from spark.features.device_features import compute_device_features
 import src.constants as const
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT_PATH = ROOT / const.FEATURE_PATH
 
 
@@ -32,7 +32,7 @@ def run_batch(spark_sess: SparkSession) -> None:
     df = compute_behavioral_features(df, merchants_df)
     df = compute_device_features(df, payment_methods_df)
 
-    df.write.mode("overwrite").parquet(OUTPUT_PATH)
+    df.write.mode("overwrite").parquet(str(OUTPUT_PATH))
 
 
 if __name__ == "__main__":

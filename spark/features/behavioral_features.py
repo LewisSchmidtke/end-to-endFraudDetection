@@ -18,7 +18,7 @@ def compute_behavioral_features(df: DataFrame, merchants_df: DataFrame) -> DataF
           in the user's last 30 days of transactions, 0 otherwise. Key signal for merchant switching fraud.
 
     Args:
-        df (DataFrame): Raw transactions DataFrame. Expected columns: user_id, transaction_timestamp,transaction_country, merchant_id
+        df (DataFrame): Raw transactions DataFrame. Expected columns: user_id, transaction_timestamp, transaction_country, merchant_id
         merchants_df (DataFrame): Merchants reference DataFrame. Expected columns: merchant_id, merchant_category
     Returns:
         DataFrame: Original DataFrame with behavioral feature columns appended.
@@ -26,7 +26,8 @@ def compute_behavioral_features(df: DataFrame, merchants_df: DataFrame) -> DataF
     # We convert the timestamp to unix seconds so we can use rangeBetween (uses numeric offsets)
     df = df.withColumn("ts_unix", F.unix_timestamp("transaction_timestamp"))
 
-    df = df.join(merchants_df.select("merchant_id", "merchant_category"),on="merchant_id",how="left")
+    if "merchant_category" not in df.columns:
+        df = df.join(merchants_df.select("merchant_id", "merchant_category"), on="merchant_id", how="left")
 
     ######################################### TIME SINCE LAST TRANSACTION ################################################
     # We get all user transactions and then look at the last transaction time

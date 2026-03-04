@@ -4,6 +4,10 @@ import random
 from datetime import datetime
 from kafka import KafkaProducer
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import src.CurrencyConvertor as CC
 import src.TransactionGenerator as TG
 import src.DatabaseManager as DBM

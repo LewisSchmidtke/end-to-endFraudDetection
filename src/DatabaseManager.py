@@ -291,7 +291,7 @@ class DatabaseManager:
                 try:
                     query = """
                         SELECT t.user_id, t.device_id, t.transaction_amount_usd, t.transaction_status, t.payment_id,
-                               t.transaction_timestamp, t.transaction_country, t.merchant_id, 
+                               t.transaction_timestamp, t.transaction_country, t.merchant_id, t.transaction_channel,
                                m.merchant_category
                         FROM transactions t
                         JOIN merchants m ON t.merchant_id = m.merchant_id
@@ -346,6 +346,23 @@ class DatabaseManager:
                     conn.commit()
 
                     return alert_id
+
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Error inserting fraud alert: {e}")
+                    raise
+
+    def fetch_merchant_info(self, merchant_id: int) -> dict:
+        with self.establish_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                try:
+                    query = """
+                        SELECT * FROM merchants
+                        WHERE merchant_id = %s;
+                    """
+                    cursor.execute(query, (merchant_id,))
+
+                    return cursor.fetchone()
 
                 except Exception as e:
                     conn.rollback()
